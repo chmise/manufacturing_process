@@ -134,66 +134,44 @@ const Factory2DTwin = () => {
         width: beltWidthWide,
         lanes: 3,              // 3개 병렬 레인
         processes: [
-          { name: '수밀검사', x: 750, width: 110, height: multiLineBoxHeight },
-          { name: '휠 얼라이언트', x: 550, width: 140, height: multiLineBoxHeight },
-          { name: '헤드램프', x: 350, width: 100, height: multiLineBoxHeight }
+          { name: '수밀검사', x: 350, width: 110, height: multiLineBoxHeight },
+          { name: '헤드램프', x: 550, width: 100, height: multiLineBoxHeight },
+          { name: '휠 얼라이언트', x: 750, width: 140, height: multiLineBoxHeight }
         ]
       }
     ];
 
-    // ===== 컨베이어 벨트 그리기 =====
-    ctx.strokeStyle = '#333'; // 테두리 색상 (짙은 회색)
-    ctx.lineWidth = 2;        // 테두리 두께
+    // ===== 통합된 컨베이어 시스템 그리기 (연결부 폭 통일) =====
+    ctx.fillStyle = '#444'; // 컨베이어 색상 (진한 회색)
     
-    lines.forEach((line, i) => {
-      if (line.lanes === 1) {
-        // === 단일 라인 그리기 (A, B라인) ===
-        ctx.fillStyle = '#444'; // 벨트 색상 (짙은 회색)
-        // 벨트 본체 그리기 (X: 50~900, Y 중앙 기준으로 width/2만큼 위아래)
-        ctx.fillRect(50, line.y - line.width/2, 850, line.width);
-        
-        // 벨트 테두리
-        ctx.strokeRect(50, line.y - line.width/2, 850, line.width);
-      } else {
-        // === 병렬 라인 그리기 (C, D라인 - 3개 레인) ===
-        for (let lane = 0; lane < 3; lane++) {
-          // 각 레인의 Y 좌표 계산 (중앙에서 위아래로 배치)
-          const laneY = line.y - line.width + (lane * line.width);
-          ctx.fillStyle = '#444'; // 벨트 색상
-          // 각 레인별 벨트 그리기
-          ctx.fillRect(50, laneY - line.width/2, 850, line.width);
-          ctx.strokeRect(50, laneY - line.width/2, 850, line.width);
-        }
-      }
-    });
-
-    // ===== 라인 간 연결선 그리기 =====
-    ctx.strokeStyle = '#333'; // 연결선 색상
-    ctx.lineWidth = 0;        // 연결선 두께
+    // Path2D를 사용하여 전체 컨베이어를 하나의 도형으로 그리기
+    const conveyorPath = new Path2D();
     
-    // A라인 → B라인 연결 (우측에서 연결)
-    ctx.beginPath();
-    ctx.moveTo(900, 120);  // A라인 끝점 (Y 좌표 변경)
-    ctx.lineTo(950, 120);  // 우측으로 이동
-    ctx.lineTo(950, 320);  // 아래로 이동 (B라인 Y 좌표로)
-    ctx.lineTo(900, 320);  // B라인 끝점으로
-    ctx.stroke();
-
-    // B라인 → C라인 연결 (좌측에서 연결)
-    ctx.beginPath();
-    ctx.moveTo(50, 320);   // B라인 시작점 (Y 좌표 변경)
-    ctx.lineTo(20, 320);   // 좌측으로 이동
-    ctx.lineTo(20, 520);   // 아래로 이동 (C라인 Y 좌표로)
-    ctx.lineTo(50, 520);   // C라인 시작점으로
-    ctx.stroke();
-
-    // C라인 → D라인 연결 (우측에서 연결)
-    ctx.beginPath();
-    ctx.moveTo(900, 520);  // C라인 끝점 (Y 좌표 변경)
-    ctx.lineTo(950, 520);  // 우측으로 이동
-    ctx.lineTo(950, 720);  // 아래로 이동 (D라인 Y 좌표로)
-    ctx.lineTo(900, 720);  // D라인 끝점으로
-    ctx.stroke();
+    // 전체 X축 범위: 0부터 1000까지 (화살표 포함)
+    
+    // A라인 전체 영역 (화살표부터 끝까지)
+    conveyorPath.rect(0, 90, 1000, 60);   // X=0~1000, Y=90~150 (60px 높이)
+    
+    // A→B 수직 연결 (A라인과 같은 폭 60px)
+    conveyorPath.rect(940, 150, 60, 140); // X=940~1000, Y=150~290 (60px 폭)
+    
+    // B라인 전체 영역 (끝에서 끝까지)  
+    conveyorPath.rect(0, 290, 1000, 60);  // X=0~1000, Y=290~350 (60px 높이)
+    
+    // B→C 수직 연결 (B라인과 같은 폭 60px)
+    conveyorPath.rect(0, 350, 60, 110);   // X=0~60, Y=350~460 (60px 폭)
+    
+    // C라인 전체 영역 (끝에서 끝까지)
+    conveyorPath.rect(0, 460, 1000, 120); // X=0~1000, Y=460~580 (120px 높이)
+    
+    // C→D 수직 연결 (D라인과 같은 폭 120px)  
+    conveyorPath.rect(880, 580, 120, 80); // X=880~1000, Y=580~660 (120px 폭)
+    
+    // D라인 전체 영역 (끝에서 끝까지)
+    conveyorPath.rect(0, 660, 1000, 120); // X=0~1000, Y=660~780 (120px 높이)
+    
+    // 전체 경로를 한 번에 채우기 (겹침 없음)
+    ctx.fill(conveyorPath);
 
     // ===== 공정 박스 그리기 (각 라인별로 동일한 Y축과 높이) =====
     lines.forEach(line => {
