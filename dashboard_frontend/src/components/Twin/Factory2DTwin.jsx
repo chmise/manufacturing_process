@@ -74,7 +74,7 @@ const Factory2DTwin = () => {
     // === 콘텐츠 스케일링 및 중앙 정렬 계산 ===
     const contentW = 800, contentH = 800; // 정사각형 디자인 기준 크기 (800x800)
     // 컨테이너 크기에 맞춰 비례 스케일링 (가로/세로 중 작은 비율 선택)
-    const scale = Math.min(containerSize.width / contentW, containerSize.height / contentH) * 0.9; // 0.9는 여백 확보
+    const scale = Math.min(containerSize.width / contentW, containerSize.height / contentH) * 1; // 0.9는 여백 확보
     // 중앙 정렬을 위한 오프셋 계산
     const offsetX = (containerSize.width - contentW * scale) / 2;
     const offsetY = (containerSize.height - contentH * scale) / 2;
@@ -130,19 +130,7 @@ const Factory2DTwin = () => {
       }
     });
 
-    // === 연결 노드 그리기 ===
-    lines.forEach(line => {
-      // 각 라인마다 100px 간격으로 노드 배치 (시작점부터 끝점까지)
-      for (let x = margin; x <= 800 - margin; x += 100) {
-        ctx.beginPath();
-        ctx.arc(x, line.y, 8, 0, 2 * Math.PI); // 반지름 8px 원
-        ctx.fillStyle = '#4CAF50'; // 초록색
-        ctx.fill();
-        ctx.strokeStyle = '#fff'; // 흰색 테두리
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      }
-    });
+    
 
     // === 공정 박스 그리기 ===
     processes.forEach((lineProcesses, lineIndex) => {
@@ -151,7 +139,7 @@ const Factory2DTwin = () => {
         // 공정 박스 (라인 위쪽에 배치)
         ctx.fillStyle = '#e3f2fd'; // 연한 파랑 배경
         ctx.strokeStyle = '#1976d2'; // 진한 파랑 테두리
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.fillRect(process.x - 40, y - 70, 80, 150); // 중앙 정렬된 박스
         ctx.strokeRect(process.x - 40, y - 70, 80, 150); // 테두리
 
