@@ -167,33 +167,34 @@ const Factory2DTwin = () => {
       }
     });
 
-    // ===== 라인 간 연결선 그리기 =====
-    ctx.strokeStyle = '#333'; // 연결선 색상
-    ctx.lineWidth = 0;        // 연결선 두께
+    // ===== 라인 간 연결 컨베이어 벨트 그리기 (메인 컨베이어와 완전히 붙여서 연결) =====
+    ctx.fillStyle = '#444';   // 메인 벨트와 동일한 색상
+    ctx.strokeStyle = '#333'; // 메인 벨트와 동일한 테두리
+    ctx.lineWidth = 2;
     
-    // A라인 → B라인 연결 (우측에서 연결)
-    ctx.beginPath();
-    ctx.moveTo(900, 120);  // A라인 끝점 (Y 좌표 변경)
-    ctx.lineTo(950, 120);  // 우측으로 이동
-    ctx.lineTo(950, 320);  // 아래로 이동 (B라인 Y 좌표로)
-    ctx.lineTo(900, 320);  // B라인 끝점으로
-    ctx.stroke();
+    // A라인 → B라인 연결 컨베이어 (메인 컨베이어와 완전히 붙어서)
+    // A라인 위쪽 가장자리(120-30=90)에서 B라인 아래쪽 가장자리(320+30=350)까지
+    const startY_AB = 120 - beltWidth/2;  // A라인 위쪽 가장자리
+    const endY_AB = 320 + beltWidth/2;    // B라인 아래쪽 가장자리
+    const lengthAB = endY_AB - startY_AB; // 전체 길이
+    ctx.fillRect(900, startY_AB, beltWidth, lengthAB); // X=900 (메인 컨베이어 끝점)
+    ctx.strokeRect(900, startY_AB, beltWidth, lengthAB);
 
-    // B라인 → C라인 연결 (좌측에서 연결)
-    ctx.beginPath();
-    ctx.moveTo(50, 320);   // B라인 시작점 (Y 좌표 변경)
-    ctx.lineTo(20, 320);   // 좌측으로 이동
-    ctx.lineTo(20, 520);   // 아래로 이동 (C라인 Y 좌표로)
-    ctx.lineTo(50, 520);   // C라인 시작점으로
-    ctx.stroke();
+    // B라인 → C라인 연결 컨베이어 (메인 컨베이어와 완전히 붙어서)
+    // B라인 위쪽 가장자리(320-30=290)에서 C라인 아래쪽 가장자리(520+60=580)까지  
+    const startY_BC = 320 - beltWidth/2;     // B라인 위쪽 가장자리
+    const endY_BC = 520 + (beltWidthWide*3)/2; // C라인 아래쪽 가장자리 (3개 병렬)
+    const lengthBC = endY_BC - startY_BC;    // 전체 길이
+    ctx.fillRect(50 - beltWidth, startY_BC, beltWidth, lengthBC); // X=50-60=-10 (메인 컨베이어 시작점)
+    ctx.strokeRect(50 - beltWidth, startY_BC, beltWidth, lengthBC);
 
-    // C라인 → D라인 연결 (우측에서 연결)
-    ctx.beginPath();
-    ctx.moveTo(900, 520);  // C라인 끝점 (Y 좌표 변경)
-    ctx.lineTo(950, 520);  // 우측으로 이동
-    ctx.lineTo(950, 720);  // 아래로 이동 (D라인 Y 좌표로)
-    ctx.lineTo(900, 720);  // D라인 끝점으로
-    ctx.stroke();
+    // C라인 → D라인 연결 컨베이어 (메인 컨베이어와 완전히 붙어서)
+    // C라인 위쪽 가장자리(520-60=460)에서 D라인 아래쪽 가장자리(720+60=780)까지
+    const startY_CD = 520 - (beltWidthWide*3)/2; // C라인 위쪽 가장자리 (3개 병렬)
+    const endY_CD = 720 + (beltWidthWide*3)/2;   // D라인 아래쪽 가장자리 (3개 병렬)
+    const lengthCD = endY_CD - startY_CD;        // 전체 길이
+    ctx.fillRect(900, startY_CD, beltWidth, lengthCD); // X=900 (메인 컨베이어 끝점)
+    ctx.strokeRect(900, startY_CD, beltWidth, lengthCD);
 
     // ===== 공정 박스 그리기 (각 라인별로 동일한 Y축과 높이) =====
     lines.forEach(line => {
