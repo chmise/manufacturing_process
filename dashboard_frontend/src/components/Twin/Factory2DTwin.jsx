@@ -64,8 +64,8 @@ const Factory2DTwin = () => {
     ctx.scale(dpr, dpr); // 컨텍스트 스케일 조정 (선명도 향상)
 
     // === 배경 그리기 ===
-    ctx.fillStyle = '#f0f0f0'; // 연한 회색 배경
-    ctx.fillRect(0, 0, containerSize.width, containerSize.height);
+    // ctx.fillStyle = '#f0f0f0'; // 연한 회색 배경
+    // ctx.fillRect(0, 0, containerSize.width, containerSize.height);
 
     // === 콘텐츠 스케일링 및 중앙 정렬 설정 ===
     const contentW = 1000, contentH = 800; // 기준 콘텐츠 크기
@@ -96,10 +96,10 @@ const Factory2DTwin = () => {
         width: beltWidth,      // 벨트 너비
         lanes: 1,              // 레인 수 (1: 단일, 3: 병렬)
         processes: [           // 각 라인의 공정 리스트 (너비만 다르고 높이는 동일)
-          { name: '도어탈거', x: 150, width: 100, height: singleLineBoxHeight },
-          { name: '와이어링', x: 300, width: 80, height: singleLineBoxHeight },
+          { name: '도어탈거', x: 150, width: 120, height: singleLineBoxHeight },
+          { name: '와이어링', x: 300, width: 120, height: singleLineBoxHeight },
           { name: '헤드라이너', x: 450, width: 120, height: singleLineBoxHeight },
-          { name: '크래쉬패드', x: 700, width: 140, height: singleLineBoxHeight }
+          { name: '크래쉬패드', x: 750, width: 350, height: singleLineBoxHeight }
         ]
       },
       { 
@@ -109,9 +109,9 @@ const Factory2DTwin = () => {
         width: beltWidth,
         lanes: 1,
         processes: [
-          { name: '연료탱크', x: 700, width: 90, height: singleLineBoxHeight },
-          { name: '샤시메리지', x: 450, width: 160, height: singleLineBoxHeight },
-          { name: '머플러', x: 300, width: 100, height: singleLineBoxHeight }
+          { name: '연료탱크', x: 850, width: 100, height: singleLineBoxHeight },
+          { name: '샤시메리지', x: 500, width: 500, height: singleLineBoxHeight },
+          { name: '머플러', x: 150, width: 100, height: singleLineBoxHeight }
         ]
       },
       { 
@@ -121,10 +121,11 @@ const Factory2DTwin = () => {
         width: beltWidthWide,  // 병렬 라인용 너비
         lanes: 3,              // 3개 병렬 레인
         processes: [
-          { name: 'FEM/범퍼', x: 150, width: 120, height: multiLineBoxHeight },
-          { name: '글라스', x: 350, width: 100, height: multiLineBoxHeight },
-          { name: '시트', x: 550, width: 110, height: multiLineBoxHeight },
-          { name: '타이어', x: 750, width: 130, height: multiLineBoxHeight }
+          { name: 'FEM', x: 150, width: 120, height: multiLineBoxHeight },
+          { name: '범퍼', x: 300, width: 120, height: multiLineBoxHeight },
+          { name: '글라스', x: 450, width: 120, height: multiLineBoxHeight },
+          { name: '시트', x: 600, width: 120, height: multiLineBoxHeight },
+          { name: '타이어', x: 750, width: 120, height: multiLineBoxHeight }
         ]
       },
       { 
@@ -134,9 +135,9 @@ const Factory2DTwin = () => {
         width: beltWidthWide,
         lanes: 3,              // 3개 병렬 레인
         processes: [
-          { name: '수밀검사', x: 350, width: 110, height: multiLineBoxHeight },
-          { name: '헤드램프', x: 550, width: 100, height: multiLineBoxHeight },
-          { name: '휠 얼라이언트', x: 750, width: 140, height: multiLineBoxHeight }
+          { name: '수밀검사', x: 350, width: 400, height: multiLineBoxHeight },
+          { name: '헤드램프', x: 650, width: 120, height: multiLineBoxHeight },
+          { name: '휠 얼라이언트', x: 800, width: 120, height: multiLineBoxHeight }
         ]
       }
     ];
