@@ -115,7 +115,7 @@ const Factory2DTwin = () => {
       width: beltWidthWide,
       lanes: 3,              // 3개 병렬 레인
       processes: [
-        { name: '수밀검사', x: 350, width: 400, height: multiLineBoxHeight },
+        { name: '수밀검사', x: 320, width: 450, height: multiLineBoxHeight },
         { name: '헤드램프', x: 650, width: 120, height: multiLineBoxHeight },
         { name: '휠 얼라이언트', x: 800, width: 120, height: multiLineBoxHeight }
       ]
