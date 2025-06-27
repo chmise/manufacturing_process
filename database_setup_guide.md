@@ -7,39 +7,16 @@ remote.it을 통한 InfluxDB & PostgreSQL 연동 설정 가이드
 - **PostgreSQL**: 재고관리 & 회원관리 데이터
 
 ---
+remote.it 에 들어가서 회원가입을 하고 로그인에 사용한 메일을 카톡에 올려주세요.
 
-## 📋 1단계: 환경 설정
-
-### 데이터베이스 서버 설치
-
-#### 🍎 macOS
-```bash
-# PostgreSQL 설치
-brew install postgresql
-brew services start postgresql
-
-# InfluxDB 설치
-brew install influxdb
-brew services start influxdb
-```
-
-#### 🪟 Windows
-```powershell
-# PostgreSQL 설치 (공식 installer 다운로드)
-# https://www.postgresql.org/download/windows/
-
-# InfluxDB 설치 (chocolatey 사용)
-choco install influxdb
-# 또는 공식 installer: https://portal.influxdata.com/downloads/
-```
 
 ### application.properties 설정
 `src/main/resources/application.properties`에 추가:
 ```properties
 # PostgreSQL 설정
-spring.datasource.url=jdbc:postgresql://your-remote-it-url:5432/manufacturing_db
-spring.datasource.username=your-username
-spring.datasource.password=your-password
+spring.datasource.url=jdbc:postgresql://your-remote-it-url/manufacturing_db
+spring.datasource.username=postgres
+spring.datasource.password=1234
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 # JPA 설정
@@ -48,10 +25,17 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 
 # InfluxDB 설정 (MQTT 센서 데이터용)
-influxdb.url=http://your-remote-it-url:8086
-influxdb.token=your-token
-influxdb.org=manufacturing
+influxdb.url=http://your-remote-it-url
+influxdb.token=apiv3_cEbVg1AZ9vV8n6ldeFVBf_ZocFlxa170VAQ4Aq2uUHVUuE63fvdu5VSVhSiQvvPlCUVBSx4TD4b9fl_G334ISw
+influxdb.org=factory
 influxdb.bucket=mqtt_sensor_data
+
+이게 아닐 확률이 높음.
+연결 테스트 방법.
+remote.it 에 연결 후
+cmd에서 
+gpt에 물어보기...
+
 ```
 ---
 
