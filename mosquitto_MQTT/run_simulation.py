@@ -12,26 +12,30 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
 
-from mosquitto_MQTT.assembly.assembly_simulator import AssemblyLineSimulator
+# from mosquitto_MQTT.assembly.assembly_simulator import AssemblyLineSimulator  # 수동 모드에서는 사용 안함
 
 def main():
-    print("🏭 현대차 조립라인 MQTT 시뮬레이터")
+    print("🏭 현대차 조립라인 MQTT 시뮬레이터 (수동 모드)")
     print("=" * 50)
-    print("🚗 차량 모델: 아반떼, 투싼, 팰리세이드, 코나, 그랜저")
-    print("📍 스테이션: A01(도어탈거), A02(배선), B01(연료탱크)")
-    print("📡 MQTT 토픽:")
-    print("  - factory/{station_id}/telemetry")
-    print("  - factory/{station_id}/status") 
-    print("  - factory/{station_id}/quality")
-    print("🔧 RFID 추적: 차량별 실시간 위치 및 진행률")
-    print("⚙️  센서 데이터: 토크, 전압, 압력, 진동 등")
+    print("🚗 2D Digital Twin에서 차량 발주 버튼으로 제어")
+    print("📍 스테이션: A01(도어탈거) → A02(배선) → ... → D03(수밀검사)")
+    print("📡 MQTT 자동 발행: 비활성화")
+    print("🔧 현장 데이터 시뮬레이션: React Frontend에서 구현")
+    print("⚙️  실시간 차량 추적: 2D Twin 캔버스에서 시각화")
+    print()
+    print("ℹ️  이제 React Dashboard(http://localhost:5173)에서")
+    print("   Factory2D Twin 페이지로 이동하여 차량 발주 버튼을 사용하세요!")
     print()
     
-    # 시뮬레이터 시작
-    simulator = AssemblyLineSimulator()
+    # MQTT 자동 발행 비활성화 - 대기 모드
+    print("🔄 대기 모드 - React Frontend에서 제어 중...")
+    print("   (Ctrl+C로 종료)")
     
     try:
-        simulator.start()
+        # 무한 대기 (MQTT 자동 발행 없음)
+        import time
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
         print("\n👋 시뮬레이션을 종료합니다.")
     except Exception as e:
