@@ -182,7 +182,7 @@ class C02GlassSimulator(BaseStationSimulator):
             return {
                 "station_position": self.station_position,
                 "vehicle_id": self.current_vehicle.vehicle_id,
-                "rfid": self.current_vehicle.rfid_tag,
+                "rfid": self.current_vehicle.vehicle_id,
                 "progress_in_station": round(progress, 1),
                 "estimated_completion": self.phase_start_time + 109,
                 "line_position": f"C-{self.current_glass + 2}",

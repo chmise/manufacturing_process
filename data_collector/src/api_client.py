@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import logging
 from typing import Dict, Any, Optional
 
 class APIClient:
@@ -9,6 +10,7 @@ class APIClient:
         self.endpoints = config['api']['endpoints']
         self.timeout = config['api']['timeout']
         self.retry_count = config['api'].get('retry_count', 3)
+        self.logger = logging.getLogger(__name__)
         
         self.session = requests.Session()
         self.session.headers.update({
@@ -23,6 +25,10 @@ class APIClient:
     def send_kpi_data(self, kpi_data: Dict[str, Any]) -> bool:
         """🆕 KPI 데이터 전송"""
         return self._send_data(self.endpoints['kpi_data'], kpi_data)
+    
+    def send_vehicle_tracking_data(self, vehicle_data: Dict[str, Any]) -> bool:
+        """🆕 차량 추적 데이터 전송"""
+        return self._send_data(self.endpoints['vehicle_tracking'], vehicle_data)
     
     def _send_data(self, endpoint: str, data: Dict[str, Any]) -> bool:
         """데이터 전송 (재시도 로직 포함)"""
@@ -39,10 +45,12 @@ class APIClient:
                 if response.status_code == 200:
                     return True
                 else:
-                    print(f"⚠️ API 오류 ({attempt+1}/{self.retry_count}): {response.status_code}")
+                    self.logger.warning(f"⚠️ API 오류 ({attempt+1}/{self.retry_count}): {response.status_code}")
                     
+            except requests.exceptions.ConnectionError:
+                self.logger.warning("⚠️ API 서버 연결 실패 (Spring Boot 서버가 실행 중인지 확인)")
             except requests.exceptions.RequestException as e:
-                print(f"❌ 네트워크 오류 ({attempt+1}/{self.retry_count}): {e}")
+                self.logger.error(f"❌ 네트워크 오류 ({attempt+1}/{self.retry_count}): {e}")
             
             if attempt < self.retry_count - 1:
                 time.sleep(2 ** attempt)  # 지수 백오프
