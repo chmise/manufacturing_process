@@ -54,13 +54,21 @@ source venv/bin/activate
 ```
 
 ### Windows 사용자
-```cmd
-# 1. 가상환경 활성화
-venv\Scripts\activate.bat
+#### 중요!!!!==================  C:\Program Files\mosquitto\mosquitto.exe 이 부분을 mosquitto가 설치되어있는 폴더로 바꾸기!!!!!!
+powershell 로 열기.
+.\start.ps1
+만약 한글이 깨질시 
+chcp 65001 입력후 커맨드 실행
 
-# 2. 스크립트 실행
-start_windows.bat
-```
+안 되면 
+$env:LC_ALL='C.UTF-8'
+[System.Console]::InputEncoding = [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+입력후 실행
+
+안 되면 
+vscode 설정 or (컨트롤 + ,) 들어가서 밑의 커멘드 입력.
+"files.encoding": "utf8bom"
+utf8 Bom 으로 설정하면 한글 해결
 
 **자동화 스크립트 기능:**
 - ✅ 사전 요구사항 자동 확인 (Node.js, Java, Python, Mosquitto)
