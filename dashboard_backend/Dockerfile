@@ -16,7 +16,7 @@ COPY settings.gradle .
 # Gradle wrapper 실행 권한 부여
 RUN chmod +x ./gradlew
 
-# 소스 코드 복사
+# 소스 코드 복사 (application.properties 포함)
 COPY src src
 
 # 애플리케이션 빌드
