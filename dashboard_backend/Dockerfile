@@ -25,5 +25,5 @@ RUN ./gradlew bootJar --no-daemon
 # 포트 노출
 EXPOSE 8080
 
-# 애플리케이션 실행
+# 애플리케이션 실행 (jar 파일명 확인 필요)
 CMD ["java", "-jar", "build/libs/dashboard_backend-0.0.1-SNAPSHOT.jar"]

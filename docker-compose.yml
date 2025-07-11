@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   backend:
     build: 
-      context: ./dashboard-backend
+      context: ./dashboard_backend  # 언더스코어 수정
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -12,7 +10,7 @@ services:
 
   frontend:
     build:
-      context: ./dashboard-frontend
+      context: ./dashboard_frontend  # 언더스코어 수정
       dockerfile: Dockerfile
     ports:
       - "3000:80"
