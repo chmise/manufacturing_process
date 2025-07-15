@@ -1,9 +1,10 @@
-name: Deploy to AWS EC2 CodeDeploy
+name: Deploy to AWS EC2 via CodeDeploy
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:  # 수동 실행 추가
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -34,5 +35,5 @@ jobs:
           --application-name factory-deploy-app \
           --deployment-group-name codedeploy-deployment-group \
           --s3-location bucket=u1-factory-buckek,key=deployments/deployment-package-${{ github.sha }}.zip,bundleType=zip \
-          --deployment-config-name CodeDeployDefault.AllAtOnceBlueGreen \
+          --deployment-config-name CodeDeployDefault.AllAtOnce \
           --description "Deployment from GitHub Actions - Commit: ${{ github.sha }}"
