@@ -8,15 +8,6 @@ dashboard-backend/.project
 dashboard-backend/.classpath
 dashboard-backend/src/main/resources/application.properties
 
-# Python (data-collector)
-data-collector/__pycache__/
-data-collector/*.pyc
-data-collector/*.pyo
-data-collector/.env
-data-collector/venv/
-data-collector/.pytest_cache/
-data-collector/logs/*.log
-
 # Python bytecode
 *.pyc
 *.pyo
