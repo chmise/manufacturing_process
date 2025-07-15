@@ -6,7 +6,7 @@ const Factory3D = () => {
     <div className="row g-3">
       <div className="col-sm-6 col-lg-4">
         <div className="card">
-          <div className="card-body" style={{ height: "50rem" }}>
+          <div className="card-body" style={{ height: "50rem", overflow: "auto" }}>
             <Navbar />
             {/* 왼쪽 네비게이션 및 컨트롤 패널 */}
           </div>
