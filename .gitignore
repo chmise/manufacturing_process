@@ -43,9 +43,8 @@ Thumbs.db
 *.log
 
 # 임시 파일
-*.tmp
-.tmp
-tmp/
+.tmp.driveupload/
+.tmp.drivedownload/
 
 # 보안 관련
 *.key
