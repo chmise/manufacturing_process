@@ -8,8 +8,16 @@ WORKDIR /app
 # Copy backend source
 COPY dashboard_backend/ .
 
-# Alpine에서 빌드 (메모리 제한 제거)
-RUN gradle clean build -x test --no-daemon
+# Gradle 캐시 정리 및 빌드 (강화된 재시도 로직)
+RUN gradle clean build -x test --no-daemon || \
+    (echo "First build failed, clearing caches..." && \
+     rm -rf ~/.gradle/caches && \
+     rm -rf /tmp/* && \
+     gradle clean build -x test --no-daemon) || \
+    (echo "Second build failed, trying minimal build..." && \
+     gradle clean --no-daemon && \
+     gradle compileJava --no-daemon && \
+     gradle bootJar --no-daemon -x test)
 
 # ===================================
 # Frontend Build Stage  
