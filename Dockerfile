@@ -1,28 +1,24 @@
 # ===================================
-# 통합 Dockerfile - Frontend & Backend
-# ===================================
-
-# ===================================
 # Backend Build Stage
 # ===================================
 FROM gradle:8.1.1-jdk17 AS backend-build
 
-WORKDIR /app/backend
+WORKDIR /app
 
 # Copy backend source
 COPY dashboard_backend/ .
 
-# Build Spring Boot application
-RUN gradle clean build -x test
+# Build (권한 문제 해결)
+RUN chmod +x ./gradlew && gradle clean build -x test --no-daemon
 
 # ===================================
 # Frontend Build Stage  
 # ===================================
 FROM node:18 AS frontend-build
 
-WORKDIR /app/frontend
+WORKDIR /app
 
-# Copy frontend source
+# Copy and build frontend
 COPY dashboard_frontend/package*.json ./
 RUN npm ci
 
@@ -30,56 +26,32 @@ COPY dashboard_frontend/ .
 RUN npm run build
 
 # ===================================
-# Backend Runtime Image (JDK 이미 포함!)
+# Backend Runtime
 # ===================================
-FROM openjdk:17 AS backend
+FROM openjdk:17-jre AS backend
 
 WORKDIR /app
 
-# Copy built JAR from backend-build stage
-COPY --from=backend-build /app/backend/build/libs/*.jar app.jar
+# Copy JAR file
+COPY --from=backend-build /app/build/libs/*.jar app.jar
 
-# Set environment variables
 ENV SPRING_PROFILES_ACTIVE=production
 
-# Install useful tools (JDK에 이미 포함되어 있지만 추가 도구 설치 가능)
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    net-tools \
-    && rm -rf /var/lib/apt/lists/*
-
-# Expose port
 EXPOSE 8080
 
-# Start application
 CMD ["java", "-jar", "app.jar"]
 
 # ===================================
-# Frontend Runtime Image (Ubuntu 기반)
+# Frontend Runtime
 # ===================================
-FROM ubuntu:22.04 AS frontend
+FROM nginx:latest AS frontend
 
-# Install nginx and other tools
-RUN apt-get update && apt-get install -y \
-    nginx \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Copy built frontend
+COPY --from=frontend-build /app/dist /usr/share/nginx/html
 
-# Remove default nginx config
-RUN rm -rf /usr/share/nginx/html/*
-
-# Copy built frontend from frontend-build stage
-COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
-
-# Copy nginx configuration
+# Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Create nginx PID directory
-RUN mkdir -p /var/run/nginx
+EXPOSE 3000
 
-# Expose port
-EXPOSE 80
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
