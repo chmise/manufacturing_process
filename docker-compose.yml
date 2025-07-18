@@ -14,7 +14,7 @@ services:
       resources:
         limits:
           memory: 450M      # Spring Boot 메모리 제한
-          cpus: '0.8'       # CPU 제한 (t2.micro 고려)
+          cpus: '0.8'       # CPU 제한
         reservations:
           memory: 200M
           cpus: '0.2'

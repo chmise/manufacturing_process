@@ -43,7 +43,7 @@ ENV TZ=Asia/Seoul
 
 EXPOSE 8080
 
-# 메모리 최적화된 JVM 설정 (t2.micro용)
+# 메모리 효율적인 JVM 설정
 CMD ["java", \
      "-Xmx400m", \
      "-Xms200m", \
