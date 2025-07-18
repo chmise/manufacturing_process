@@ -9,14 +9,14 @@ env:
   DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
   
-  FRONTEND_IMAGE_NAME: chmise/factory-frontend
-  BACKEND_IMAGE_NAME: chmise/factory-backend
+  FRONTEND_IMAGE_NAME: arims0522/factory-frontend
+  BACKEND_IMAGE_NAME: arims0522/factory-backend
   
   # AWS 정보
   AWS_REGION: ap-northeast-2
-  EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}  # Bastion Host 인스턴스 ID
+  EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
   EC2_USERNAME: ec2-user
-  EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}  # PEM 키 내용
+  EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
   
   # Private 인스턴스 정보 (고정 Private IP)
   MASTER_HOST: 10.0.2.224
