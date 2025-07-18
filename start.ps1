@@ -21,20 +21,6 @@ Start-Job -Name "Mosquitto" -ScriptBlock {
     & "C:\Program Files\mosquitto\mosquitto.exe" -v 
 }
 
-Write-Host "3️⃣ 데이터 수집기 시작 중..." -ForegroundColor Yellow
-Start-Job -Name "DataCollector" -ScriptBlock { 
-    param($path)
-    Set-Location "$path\data_collector"
-    python main.py 
-} -ArgumentList $rootPath
-
-Write-Host "4️⃣ MQTT 시뮬레이터 시작 중..." -ForegroundColor Yellow
-Start-Job -Name "MQTTSimulator" -ScriptBlock { 
-    param($path)
-    Set-Location "$path\mosquitto_MQTT"
-    python run_simulation.py 
-} -ArgumentList $rootPath
-
 Write-Host "5️⃣ React 프론트엔드 시작 중..." -ForegroundColor Yellow
 Start-Job -Name "Frontend" -ScriptBlock { 
     param($path)
