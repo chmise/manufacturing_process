@@ -3,8 +3,9 @@ version: '3.8'
 services:
   backend:
     build: 
-      context: ./dashboard_backend
+      context: .  # 최상위를 컨텍스트로 변경
       dockerfile: Dockerfile
+      target: backend  # 백엔드 스테이지 지정
     ports:
       - "8080:8080"
     networks:
@@ -12,8 +13,9 @@ services:
 
   frontend:
     build:
-      context: ./dashboard_frontend  
+      context: .  # 최상위를 컨텍스트로 변경
       dockerfile: Dockerfile
+      target: frontend  # 프론트엔드 스테이지 지정
     ports:
       - "3000:3000"
     depends_on:
