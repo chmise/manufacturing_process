@@ -1,67 +1,197 @@
-name: Deploy to AWS EC2 via CodeDeploy
+name: Deploy Factory App to EC2 via Docker Hub
+
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # 수동 실행 추가
+  workflow_dispatch:
+
+env:
+  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+  DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+  
+  FRONTEND_IMAGE_NAME: chmise/factory-frontend
+  BACKEND_IMAGE_NAME: chmise/factory-backend
+  
+  AWS_REGION: ap-northeast-2
+  EC2_HOST: ${{ secrets.EC2_HOST }}  # 15.165.155.47 (Bastion Host)
+  EC2_USERNAME: ec2-user
+  EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}  # PEM 키 내용
+  
+  # Private 인스턴스 정보
+  MASTER_HOST: 10.0.2.224
+  SLAVE_HOST: 10.0.12.124
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
+    - name: Checkout Repository
       uses: actions/checkout@v4
       
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ap-northeast-2
-    
-    - name: Verify deployment files
-      run: |
-        echo "=== 현재 디렉토리 구조 ==="
-        ls -la
+        username: ${{ env.DOCKER_HUB_USERNAME }}
+        password: ${{ env.DOCKER_HUB_TOKEN }}
         
-        echo "=== scripts 디렉토리 확인 ==="
-        if [ -d "scripts" ]; then
-          echo "✅ scripts 디렉토리 존재"
-          ls -la scripts/
-          echo "=== 스크립트 파일 권한 확인 ==="
-          ls -la scripts/*.sh
-        else
-          echo "❌ scripts 디렉토리가 없습니다!"
-          exit 1
-        fi
-        
-        echo "=== appspec.yml 확인 ==="
-        if [ -f "appspec.yml" ]; then
-          echo "✅ appspec.yml 존재"
-          cat appspec.yml
-        else
-          echo "❌ appspec.yml이 없습니다!"
-          exit 1
-        fi
-    
-    - name: Create deployment package
-      run: |
-        echo "=== 배포 패키지 생성 중 ==="
-        # 배포에 필요한 파일들을 압축
-        zip -r deployment-package.zip . -x "*.git*" "node_modules/*" "*.log" "venv/*"
-        
-        echo "=== 패키지 내용 확인 ==="
-        unzip -l deployment-package.zip | grep -E "(appspec.yml|scripts/)"
-    
-    - name: Upload to S3
-      run: |
-        aws s3 cp deployment-package.zip s3://u1-factory-buckek/deployments/deployment-package-${{ github.sha }}.zip
-    
-    - name: Create CodeDeploy deployment
-      run: |
-        aws deploy create-deployment \
-          --application-name factory-deploy-app \
-          --deployment-group-name codedeploy-deployment-group \
-          --s3-location bucket=u1-factory-buckek,key=deployments/deployment-package-${{ github.sha }}.zip,bundleType=zip \
-          --deployment-config-name CodeDeployDefault.AllAtOnce \
-          --description "Deployment from GitHub Actions - Commit: ${{ github.sha }}"
+    - name: Build and Push Frontend Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: frontend  # 멀티스테이지 타겟 지정
+        push: true
+        tags: |
+          ${{ env.FRONTEND_IMAGE_NAME }}:latest
+          ${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+          
+    - name: Build and Push Backend Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: backend   # 멀티스테이지 타겟 지정
+        push: true
+        tags: |
+          ${{ env.BACKEND_IMAGE_NAME }}:latest
+          ${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Deploy to EC2 Master Instance
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USERNAME }}
+        key: ${{ env.EC2_KEY }}
+        port: 22
+        script: |
+          echo "=== Connecting to Master Instance ==="
+          ssh -i "factory-pem-key.pem" ec2-user@${{ env.MASTER_HOST }} << 'MASTER_COMMANDS'
+            
+            echo "--- Creating deployment directory ---"
+            mkdir -p /home/ec2-user/factory-app
+            cd /home/ec2-user/factory-app
+            
+            echo "--- Creating docker-compose.yml ---"
+            cat > docker-compose.yml << 'COMPOSE_EOF'
+          version: '3.8'
+          
+          services:
+            backend:
+              image: ${{ env.BACKEND_IMAGE_NAME }}:latest
+              container_name: factory-backend
+              ports:
+                - "8080:8080"
+              environment:
+                - SPRING_PROFILES_ACTIVE=production
+              networks:
+                - factory-network
+              restart: unless-stopped
+              
+            frontend:
+              image: ${{ env.FRONTEND_IMAGE_NAME }}:latest
+              container_name: factory-frontend
+              ports:
+                - "3000:80"
+              depends_on:
+                - backend
+              networks:
+                - factory-network
+              restart: unless-stopped
+              
+          networks:
+            factory-network:
+              driver: bridge
+          COMPOSE_EOF
+            
+            echo "--- Pulling latest images ---"
+            docker-compose pull
+            
+            echo "--- Stopping existing containers ---"
+            docker-compose down || true
+            
+            echo "--- Starting new containers ---"
+            docker-compose up -d
+            
+            echo "--- Cleaning up unused images ---"
+            docker system prune -f
+            
+            echo "--- Checking container status ---"
+            docker-compose ps
+            
+            echo "--- Testing services ---"
+            sleep 30
+            curl -f http://localhost:3000 > /dev/null && echo "✅ Frontend OK" || echo "❌ Frontend Failed"
+            curl -f http://localhost:8080 > /dev/null && echo "✅ Backend OK" || echo "❌ Backend Failed"
+            
+          MASTER_COMMANDS
+          
+    # - name: Deploy to EC2 Slave Instance
+    #   uses: appleboy/ssh-action@master
+    #   with:
+    #     host: ${{ env.EC2_HOST }}
+    #     username: ${{ env.EC2_USERNAME }}
+    #     key: ${{ env.EC2_KEY }}
+    #     port: 22
+    #     script: |
+    #       echo "=== Connecting to Slave Instance ==="
+    #       ssh -i "factory-pem-key.pem" ec2-user@${{ env.SLAVE_HOST }} << 'SLAVE_COMMANDS'
+    #         
+    #         echo "--- Creating deployment directory ---"
+    #         mkdir -p /home/ec2-user/factory-app
+    #         cd /home/ec2-user/factory-app
+    #         
+    #         echo "--- Creating docker-compose.yml ---"
+    #         cat > docker-compose.yml << 'COMPOSE_EOF'
+    #       version: '3.8'
+    #       
+    #       services:
+    #         backend:
+    #           image: ${{ env.BACKEND_IMAGE_NAME }}:latest
+    #           container_name: factory-backend
+    #           ports:
+    #             - "8080:8080"
+    #           environment:
+    #             - SPRING_PROFILES_ACTIVE=production
+    #           networks:
+    #             - factory-network
+    #           restart: unless-stopped
+    #           
+    #         frontend:
+    #           image: ${{ env.FRONTEND_IMAGE_NAME }}:latest
+    #           container_name: factory-frontend
+    #           ports:
+    #             - "3000:80"
+    #           depends_on:
+    #             - backend
+    #           networks:
+    #             - factory-network
+    #           restart: unless-stopped
+    #           
+    #       networks:
+    #         factory-network:
+    #           driver: bridge
+    #       COMPOSE_EOF
+    #         
+    #         echo "--- Pulling latest images ---"
+    #         docker-compose pull
+    #         
+    #         echo "--- Stopping existing containers ---"
+    #         docker-compose down || true
+    #         
+    #         echo "--- Starting new containers ---"
+    #         docker-compose up -d
+    #         
+    #         echo "--- Cleaning up unused images ---"
+    #         docker system prune -f
+    #         
+    #         echo "--- Checking container status ---"
+    #         docker-compose ps
+    #         
+    #       SLAVE_COMMANDS
