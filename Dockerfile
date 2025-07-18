@@ -30,6 +30,7 @@ RUN npm run build
 # ===================================
 FROM openjdk:17-jdk-slim AS backend
 
+
 WORKDIR /app
 
 # Copy JAR file
