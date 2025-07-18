@@ -8,9 +8,8 @@ WORKDIR /app
 # Copy backend source
 COPY dashboard_backend/ .
 
-# Alpine에서 빌드 (메모리 설정 완화)
-RUN gradle clean build -x test --no-daemon \
-    -Dorg.gradle.jvmargs="-Xmx1024m -XX:MaxMetaspaceSize=256m"
+# Alpine에서 빌드 (메모리 제한 제거)
+RUN gradle clean build -x test --no-daemon
 
 # ===================================
 # Frontend Build Stage  
@@ -43,7 +42,7 @@ ENV TZ=Asia/Seoul
 
 EXPOSE 8080
 
-# 메모리 효율적인 JVM 설정
+# 메모리 최적화된 JVM 설정 (t3.micro용)
 CMD ["java", \
      "-Xmx400m", \
      "-Xms200m", \
