@@ -8,8 +8,8 @@ WORKDIR /app
 # Copy backend source
 COPY dashboard_backend/ .
 
-# Build (권한 문제 해결)
-RUN chmod +x ./gradlew && gradle clean build -x test --no-daemon
+# gradlew 대신 시스템 gradle 사용
+RUN gradle clean build -x test --no-daemon
 
 # ===================================
 # Frontend Build Stage  
