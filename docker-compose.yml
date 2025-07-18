@@ -1,24 +1,26 @@
+version: '3.8'
+
 services:
   backend:
     build: 
-      context: ./dashboard_backend  # 언더스코어 수정
+      context: ./dashboard_backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     networks:
-      - app-network
+      - factory-network
 
   frontend:
     build:
-      context: ./dashboard_frontend  # 언더스코어 수정
+      context: ./dashboard_frontend  
       dockerfile: Dockerfile
     ports:
       - "3000:80"
-    networks:
-      - app-network
     depends_on:
       - backend
+    networks:
+      - factory-network
 
 networks:
-  app-network:
+  factory-network:
     driver: bridge
