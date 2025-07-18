@@ -21,7 +21,10 @@ WORKDIR /app
 
 # Copy and build frontend
 COPY dashboard_frontend/package*.json ./
-RUN npm ci --omit=dev --prefer-offline  # --only=production 대신
+
+# 빌드 시에는 devDependencies도 필요 (vite 등)
+RUN npm ci --prefer-offline
+
 COPY dashboard_frontend/ .
 RUN npm run build
 
