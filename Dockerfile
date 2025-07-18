@@ -28,7 +28,7 @@ RUN npm run build
 # ===================================
 # Backend Runtime
 # ===================================
-FROM openjdk:17-jre AS backend
+FROM openjdk:17-jdk-slim AS backend
 
 WORKDIR /app
 
