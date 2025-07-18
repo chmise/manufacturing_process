@@ -1,97 +1,183 @@
 import React, { useState, useEffect } from 'react';
-
-const getStatus = (quantity, safetyStock) => {
-  if (quantity === 0) return { label: '품절', color: 'status-red' };
-  if (quantity <= safetyStock) return { label: '부족', color: 'status-orange' };
-  if (quantity <= safetyStock * 1.5) return { label: '주의', color: 'status-yellow' };
-  return { label: '정상', color: 'status-green' };
-};
+import axios from 'axios';
 
 const InventoryTable = () => {
-  const [items, setItems] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const itemsPerPage = 5;
 
+  // API 호출
   useEffect(() => {
-    setItems([
-      {
-        id: 1,
-        itemCode: 'A1001',
-        itemName: '엔진 블록',
-        quantity: 10,
-        safetyStock: 20,
-        location: '창고1',
-        supplier: '현대제철',
-        receivedDate: '2025-06-10'
-      },
-      {
-        id: 2,
-        itemCode: 'B2002',
-        itemName: '변속기',
-        quantity: 30,
-        safetyStock: 10,
-        location: '창고2',
-        supplier: '만도',
-        receivedDate: '2025-06-15'
-      },
-      {
-        id: 3,
-        itemCode: 'C3003',
-        itemName: '도어 패널',
-        quantity: 120,
-        safetyStock: 50,
-        location: '창고3',
-        supplier: '한온시스템',
-        receivedDate: '2025-06-12'
-      },
-      {
-        id: 4,
-        itemCode: 'D4004',
-        itemName: '시트 프레임',
-        quantity: 0,
-        safetyStock: 15,
-        location: '창고4',
-        supplier: '세종공업',
-        receivedDate: '2025-06-18'
+    const fetchStockData = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/stock', {
+          withCredentials: true,
+        });
+
+        const mappedData = response.data.map(item => ({
+          id: item.stockCode,
+          name: item.stockName,
+          location: item.stockLocation,
+          currentStock: item.currentStock,
+          safetyStock: item.safetyStock,
+          consumptionRate: 'N/A',
+          estimatedRunOut: 'N/A',
+          status: item.stockState,
+          lastSupply: item.inboundDate
+            ? new Date(item.inboundDate).toLocaleString()
+            : 'N/A',
+        }));
+        setInventory(mappedData);
+      } catch (error) {
+        console.error('Error fetching stock data:', error);
       }
-    ]);
+    };
+
+    fetchStockData();
   }, []);
+
+  // 검색 필터 적용
+  const filteredInventory = inventory.filter(item =>
+    item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
+
+  const paginatedInventory = filteredInventory.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case '정상': return 'status-green';
+      case '주의': return 'status-yellow';
+      case '부족': return 'status-orange';
+      case '긴급': return 'status-red';
+      default: return 'status-gray';
+    }
+  };
+
+  const getSupplyColor = (supply) => {
+    if (supply.includes('완료')) return 'status-green';
+    if (supply.includes('지연')) return 'status-red';
+    return 'status-blue';
+  };
 
   return (
     <div className="table-responsive">
-      <table className="table">
+
+      {/* 🔍 검색 입력창 */}
+      <div className="mb-3 d-flex justify-content-end">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="제품 코드 또는 제품명을 검색"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // 검색 시 1페이지로 리셋
+          }}
+        />
+      </div>
+
+      {/* 테이블 */}
+      <table className="table table-vcenter">
         <thead>
           <tr>
-            <th><span class="flag flag-xs flag-country-us"></span></th>
-            <th className="text-nowrap">품목 코드</th>
-            <th className="text-nowrap">품 목 명</th>
-            <th className="text-nowrap">현재 재고 수량</th>
-            <th className="text-nowrap">평균 재고 수량</th>
-            <th className="text-nowrap">창고 위치</th>
-            <th className="text-nowrap">협력 업체</th>
-            <th className="text-nowrap">입고 일자</th>
-            <th className="text-nowrap">실시간 재고 상태</th>
+            <th>제품 코드</th>
+            <th className="text-nowrap">제품명</th>
+            <th className="text-nowrap">위치</th>
+            <th className="text-nowrap">현재재고</th>
+            <th className="text-nowrap">안전재고</th>
+            <th className="text-nowrap">소모율</th>
+            <th className="text-nowrap">예상소진</th>
+            <th className="text-nowrap">상태</th>
+            <th className="text-nowrap">입고 시간</th>
           </tr>
         </thead>
         <tbody>
-          {items.map((item, idx) => {
-            const status = getStatus(item.quantity, item.safetyStock);
-            return (
-              <tr key={item.id}>
-                <th>{idx + 1}</th>
-                <td>{item.itemCode}</td>
-                <td>{item.itemName}</td>
-                <td>{item.quantity}</td>
-                <td>{item.safetyStock}</td>
-                <td>{item.location}</td>
-                <td>{item.supplier}</td>
-                <td>{item.receivedDate}</td>
-                <td>
-                  <span className={`status ${status.color}`}>{status.label}</span>
-                </td>
-              </tr>
-            );
-          })}
+          {paginatedInventory.map((item) => (
+            <tr key={item.id}>
+              <th>{item.id}</th>
+              <td>{item.name}</td>
+              <td>{item.location}</td>
+              <td>{item.currentStock}개</td>
+              <td>{item.safetyStock}개</td>
+              <td>{item.consumptionRate}</td>
+              <td>{item.estimatedRunOut}</td>
+              <td>
+                <span className={`status ${getStatusColor(item.status)}`}>
+                  {item.status}
+                </span>
+              </td>
+              <td>
+                <span className={`status ${getSupplyColor(item.lastSupply)}`}>
+                  {item.lastSupply}
+                </span>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
+
+      {/* Bootstrap 페이지네이션 */}
+      <div className="d-flex justify-content-center mt-4">
+        <ul className="pagination">
+          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+            <button
+              className="page-link page-text"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              이전
+            </button>
+          </li>
+
+          {Array.from({ length: totalPages }, (_, index) => (
+            <li
+              key={index}
+              className={`page-item ${currentPage === index + 1 ? 'active' : ''}`}
+            >
+              <button
+                className="page-link"
+                onClick={() => handlePageChange(index + 1)}
+              >
+                {index + 1}
+              </button>
+            </li>
+          ))}
+
+          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+            <button
+              className="page-link page-text"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              다음
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      {/* 범례 */}
+      <div className="mt-3">
+        <small className="text-muted">
+          <strong>상태 기준:</strong>
+          <span className="status status-green ms-1">정상</span> 안전재고 이상 |
+          <span className="status status-yellow ms-1">주의</span> 안전재고 근접 |
+          <span className="status status-orange ms-1">부족</span> 안전재고 미만 |
+          <span className="status status-red ms-1">긴급</span> 2시간 내 소진
+        </small>
+      </div>
     </div>
   );
 };
