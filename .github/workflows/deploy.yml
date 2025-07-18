@@ -12,12 +12,13 @@ env:
   FRONTEND_IMAGE_NAME: chmise/factory-frontend
   BACKEND_IMAGE_NAME: chmise/factory-backend
   
+  # AWS 정보
   AWS_REGION: ap-northeast-2
-  EC2_HOST: ${{ secrets.EC2_HOST }}  # 15.165.155.47 (Bastion Host)
+  EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}  # Bastion Host 인스턴스 ID
   EC2_USERNAME: ec2-user
   EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}  # PEM 키 내용
   
-  # Private 인스턴스 정보
+  # Private 인스턴스 정보 (고정 Private IP)
   MASTER_HOST: 10.0.2.224
   SLAVE_HOST: 10.0.12.124
 
@@ -63,16 +64,24 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       
-    - name: Deploy to EC2 Master Instance
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ env.EC2_HOST }}
-        username: ${{ env.EC2_USERNAME }}
-        key: ${{ env.EC2_KEY }}
-        port: 22
-        script: |
+    - name: Get Bastion Host IP and Deploy
+      run: |
+        # AWS CLI로 Bastion Host의 현재 Public IP 가져오기
+        BASTION_IP=$(aws ec2 describe-instances \
+          --instance-ids ${{ env.EC2_INSTANCE_ID }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Reservations[0].Instances[0].PublicIpAddress' \
+          --output text)
+        
+        echo "Current Bastion Host IP: $BASTION_IP"
+        
+        # SSH로 배포 실행
+        echo "${{ env.EC2_KEY }}" > private_key.pem
+        chmod 600 private_key.pem
+        
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USERNAME }}@$BASTION_IP << 'BASTION_COMMANDS'
           echo "=== Connecting to Master Instance ==="
-          ssh -i "factory-pem-key.pem" ec2-user@${{ env.MASTER_HOST }} << 'MASTER_COMMANDS'
+          ssh -i "factory-pem-key.pem" -o StrictHostKeyChecking=no ec2-user@${{ env.MASTER_HOST }} << 'MASTER_COMMANDS'
             
             echo "--- Creating deployment directory ---"
             mkdir -p /home/ec2-user/factory-app
@@ -131,6 +140,12 @@ jobs:
             curl -f http://localhost:8080 > /dev/null && echo "✅ Backend OK" || echo "❌ Backend Failed"
             
           MASTER_COMMANDS
+        BASTION_COMMANDS
+        
+        # 키 파일 삭제
+        rm private_key.pem
+
+    # ------------------------ slave (ec2요금 문제로 배포대상에서 제외)--------------------------
           
     # - name: Deploy to EC2 Slave Instance
     #   uses: appleboy/ssh-action@master
