@@ -8,9 +8,9 @@ WORKDIR /app
 # Copy backend source
 COPY dashboard_backend/ .
 
-# Alpine에서 빌드 (메모리 효율적)
+# Alpine에서 빌드 (메모리 설정 완화)
 RUN gradle clean build -x test --no-daemon \
-    -Dorg.gradle.jvmargs="-Xmx512m -XX:MaxMetaspaceSize=128m"
+    -Dorg.gradle.jvmargs="-Xmx1024m -XX:MaxMetaspaceSize=256m"
 
 # ===================================
 # Frontend Build Stage  
@@ -21,7 +21,8 @@ WORKDIR /app
 
 # Copy and build frontend
 COPY dashboard_frontend/package*.json ./
-RUN npm ci --omit=dev --prefer-offline  # --only=production 대신
+RUN npm ci --prefer-offline
+
 COPY dashboard_frontend/ .
 RUN npm run build
 
@@ -42,8 +43,15 @@ ENV TZ=Asia/Seoul
 
 EXPOSE 8080
 
-# 메모리 효율적인 JVM 설정
-CMD ["java", "-Xmx512m", "-Xms256m", "-jar", "app.jar"]
+# 메모리 최적화된 JVM 설정 (t2.micro용)
+CMD ["java", \
+     "-Xmx400m", \
+     "-Xms200m", \
+     "-XX:MaxMetaspaceSize=128m", \
+     "-XX:+UseG1GC", \
+     "-XX:MaxGCPauseMillis=200", \
+     "-XX:+UseStringDeduplication", \
+     "-jar", "app.jar"]
 
 # ===================================
 # Frontend Runtime
