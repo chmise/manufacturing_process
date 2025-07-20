@@ -55,7 +55,7 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
                   fontSize: '18px',
                   fontWeight: 600,
                   label: 'OEE',
-                  formatter: function (w) {
+                  formatter: function () {
                     return oeeValue.toFixed(1) + '%';
                   }
                 }

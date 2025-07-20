@@ -8,11 +8,10 @@ import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
 import InventoryStatus from './Inventory/InventoryTables';
 import apiService from '../service/apiService';
-import dashboardService from '../service/dashboardService';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
-  const [stationsData, setStationsData] = useState([]);
+  const [stationsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [connectionStatus, setConnectionStatus] = useState('connecting');
@@ -77,7 +76,7 @@ const Dashboard = () => {
       }
       clearTimeout(loadingTimer);
     };
-  }, []);
+  }, [loading]);
 
   // 연결 상태 표시
   const renderConnectionStatus = () => {
@@ -125,18 +124,18 @@ const Dashboard = () => {
               <div className="row g-3">
                 <div className="col-sm-12">
                   <ProductionTarget 
-                    current={dashboardData?.production?.current || 0}
-                    target={dashboardData?.production?.target || 1000}
+                    current={dashboardData?.production?.today_completed || 0}
+                    target={1000}
                   />
                 </div>
                 <div className="col-6">
                   <HourlyProduction 
-                    rate={dashboardData?.production?.hourlyRate || 0}
+                    rate={dashboardData?.production?.hourly_rate || 0}
                   />
                 </div>
                 <div className="col-6">
                   <CycleTime 
-                    time={dashboardData?.production?.cycleTime || 0}
+                    time={dashboardData?.production?.cycle_time || 0}
                   />
                 </div>
               </div>
@@ -155,7 +154,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">OEE(설비 종합 효율)</h3>
                       <ProductionStatus 
-                        oee={dashboardData?.kpi?.calculated_oee || dashboardData?.kpi?.oee || 0}
+                        oee={dashboardData?.kpi?.oee || 0}
                       />
                     </div>
                   </div>
@@ -166,7 +165,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">OTD(정기납기율)</h3>
                       <OTDStatus 
-                        otd={dashboardData?.kpi?.calculated_otd || dashboardData?.kpi?.otd || 0}
+                        otd={dashboardData?.kpi?.otd || 0}
                       />
                     </div>
                   </div>
@@ -177,7 +176,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">FTY(일발양품률)</h3>
                       <FTYStatus 
-                        fty={dashboardData?.kpi?.calculated_fty || dashboardData?.kpi?.fty || 0}
+                        fty={dashboardData?.kpi?.fty || 0}
                       />
                     </div>
                   </div>
@@ -250,7 +249,7 @@ const Dashboard = () => {
                 <div className="col-md-3">
                   <div className="text-muted small">전체 품질 점수</div>
                   <div className="h5 text-success">
-                    {(parseFloat(dashboardData?.quality?.overallScore || 0) * 100).toFixed(1)}%
+                    N/A
                   </div>
                 </div>
               </div>

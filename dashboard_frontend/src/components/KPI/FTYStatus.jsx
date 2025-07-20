@@ -55,7 +55,7 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
                   fontSize: '18px',
                   fontWeight: 600,
                   label: 'FTY',
-                  formatter: function (w) {
+                  formatter: function () {
                     return ftyValue.toFixed(1) + '%';
                   }
                 }
