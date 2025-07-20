@@ -23,87 +23,45 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "kpi_data")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class KPIData {
-    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "station_id", nullable = false)
-    private String stationId;
+    @Column(name = "timestamp", nullable = false)
+    private LocalDateTime timestamp;           // 데이터 전송 시각
     
-    @Column(name = "timestamp")
-    private LocalDateTime timestamp;
+    @Column(name = "planned_time")
+    private Integer plannedTime;               // 계획 운전 시간 (분)
     
-    @Column(name = "total_cycles")
-    private Integer totalCycles;
+    @Column(name = "downtime")
+    private Integer downtime;                  // 설비 정지 시간 (분)
     
-    @Column(name = "runtime_hours")
-    private Double runtimeHours;
+    @Column(name = "target_cycle_time")
+    private Double targetCycleTime;            // 목표 사이클 타임 (초)
     
-    // KPI JSON 데이터 저장
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "oee_data", columnDefinition = "json")
-    private JsonNode oeeData;
+    @Column(name = "good_count")
+    private Integer goodCount;                 // 양품 수량
     
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "fty_data", columnDefinition = "json")
-    private JsonNode ftyData;
+    @Column(name = "total_count")
+    private Integer totalCount;                // 전체 생산 수량
     
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "otd_data", columnDefinition = "json")
-    private JsonNode otdData;
+    @Column(name = "first_time_pass_count")
+    private Integer firstTimePassCount;        // 일발 통과 수량 (FTY 계산용)
     
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "quality_data", columnDefinition = "json")
-    private JsonNode qualityData;
+    @Column(name = "on_time_delivery_count")
+    private Integer onTimeDeliveryCount;       // 정시 납기 수량 (OTD 계산용)
     
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "throughput_data", columnDefinition = "json")
-    private JsonNode throughputData;
+    // 계산된 KPI 값들 (캐시용)
+    @Column(name = "calculated_oee")
+    private Double calculatedOEE;              // 계산된 OEE 값
     
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "cycle_time_data", columnDefinition = "json")
-    private JsonNode cycleTimeData;
+    @Column(name = "calculated_fty")
+    private Double calculatedFTY;              // 계산된 FTY 값
     
-    @PrePersist
-    protected void onCreate() {
-        if (timestamp == null) {
-            timestamp = LocalDateTime.now();
-        }
-    }
-    
-    // Helper methods for JSON manipulation
-    public void setOeeDataFromObject(Object oeeData) {
-        ObjectMapper mapper = new ObjectMapper();
-        this.oeeData = mapper.valueToTree(oeeData);
-    }
-    
-    public void setFtyDataFromObject(Object ftyData) {
-        ObjectMapper mapper = new ObjectMapper();
-        this.ftyData = mapper.valueToTree(ftyData);
-    }
-    
-    public void setOtdDataFromObject(Object otdData) {
-        ObjectMapper mapper = new ObjectMapper();
-        this.otdData = mapper.valueToTree(otdData);
-    }
-    
-    public void setQualityDataFromObject(Object qualityData) {
-        ObjectMapper mapper = new ObjectMapper();
-        this.qualityData = mapper.valueToTree(qualityData);
-    }
-    
-    public void setThroughputDataFromObject(Object throughputData) {
-        ObjectMapper mapper = new ObjectMapper();
-        this.throughputData = mapper.valueToTree(throughputData);
-    }
-    
-    public void setCycleTimeDataFromObject(Object cycleTimeData) {
-        ObjectMapper mapper = new ObjectMapper();
-        this.cycleTimeData = mapper.valueToTree(cycleTimeData);
-    }
+    @Column(name = "calculated_otd")
+    private Double calculatedOTD;              // 계산된 OTD 값
 }
