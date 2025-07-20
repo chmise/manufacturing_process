@@ -14,26 +14,34 @@ import com.u1mobis.dashboard_backend.entity.KPIData;
 @Repository
 public interface KPIDataRepository extends JpaRepository<KPIData, Long> {
     
-    // 모든 스테이션의 최신 KPI 데이터
-    @Query("SELECT k FROM KPIData k WHERE k.timestamp = (SELECT MAX(k2.timestamp) FROM KPIData k2 WHERE k2.stationId = k.stationId)")
-    List<KPIData> findLatestKPIByAllStations();
+    // 최신 KPI 데이터 조회
+    Optional<KPIData> findTopByOrderByTimestampDesc();
     
-    // 특정 스테이션의 최신 KPI
-    Optional<KPIData> findTopByStationIdOrderByTimestampDesc(String stationId);
+    // 특정 기간 KPI 데이터 조회
+    List<KPIData> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime startTime, LocalDateTime endTime);
     
-    // 특정 시간 범위의 KPI 데이터
-    List<KPIData> findByTimestampBetween(LocalDateTime startTime, LocalDateTime endTime);
+    // 오늘 최신 KPI 조회 (수정됨)
+    @Query("SELECT kd FROM KPIData kd WHERE CAST(kd.timestamp AS DATE) = CURRENT_DATE ORDER BY kd.timestamp DESC LIMIT 1")
+    Optional<KPIData> findLatestKPIToday();
     
-    // 특정 스테이션의 시간 범위 KPI
-    List<KPIData> findByStationIdAndTimestampBetween(String stationId, LocalDateTime startTime, LocalDateTime endTime);
+    // 평균 OEE 조회
+    @Query("SELECT AVG(kd.calculatedOEE) FROM KPIData kd WHERE kd.timestamp BETWEEN :startTime AND :endTime")
+    Double getAverageOEE(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
     
-    // 최근 N개 KPI 데이터 조회
-    List<KPIData> findTop10ByOrderByTimestampDesc();
+    // 평균 FTY 조회
+    @Query("SELECT AVG(kd.calculatedFTY) FROM KPIData kd WHERE kd.timestamp BETWEEN :startTime AND :endTime")
+    Double getAverageFTY(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
     
-    // 특정 스테이션의 최근 N개 KPI
-    List<KPIData> findTop10ByStationIdOrderByTimestampDesc(String stationId);
+    // 평균 OTD 조회
+    @Query("SELECT AVG(kd.calculatedOTD) FROM KPIData kd WHERE kd.timestamp BETWEEN :startTime AND :endTime")
+    Double getAverageOTD(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
     
-    // 오늘 KPI 데이터 개수
-    @Query("SELECT COUNT(k) FROM KPIData k WHERE k.timestamp >= :startOfDay AND k.timestamp < :endOfDay")
-    Long countTodayKPI(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
+    // 시간별 KPI 트렌드 (차트용) - 수정됨
+    @Query("SELECT HOUR(kd.timestamp) as hour, " +
+           "AVG(kd.calculatedOEE) as avgOEE, " +
+           "AVG(kd.calculatedFTY) as avgFTY, " +
+           "AVG(kd.calculatedOTD) as avgOTD " +
+           "FROM KPIData kd WHERE CAST(kd.timestamp AS DATE) = CURRENT_DATE " +
+           "GROUP BY HOUR(kd.timestamp) ORDER BY hour")
+    List<Object[]> getHourlyKPITrends();
 }

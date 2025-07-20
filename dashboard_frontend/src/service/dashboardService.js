@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api/kpi';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 class DashboardService {
   constructor() {
@@ -54,7 +54,7 @@ class DashboardService {
   }
 
   async getLatestKPIs() {
-    const response = await fetch(`${API_BASE_URL}/latest`);
+    const response = await fetch(`${API_BASE_URL}/kpi/realtime`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -62,7 +62,7 @@ class DashboardService {
   }
   
   async getStationKPI(stationId) {
-    const response = await fetch(`${API_BASE_URL}/station/${stationId}`);
+    const response = await fetch(`${API_BASE_URL}/kpi/realtime`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -70,7 +70,7 @@ class DashboardService {
   }
   
   async getFactorySummary() {
-    const response = await fetch(`${API_BASE_URL}/factory/summary`);
+    const response = await fetch(`${API_BASE_URL}/dashboard`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
