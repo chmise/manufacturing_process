@@ -7,6 +7,7 @@ import HourlyProduction from './KPI/HourlyProduction';
 import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
 import InventoryStatus from './Inventory/InventoryTables';
+import apiService from '../service/apiService';
 import dashboardService from '../service/dashboardService';
 
 const Dashboard = () => {
@@ -18,32 +19,48 @@ const Dashboard = () => {
 
   useEffect(() => {
     let mounted = true;
+    let pollingInterval;
 
-    // 데이터 업데이트 핸들러
-    const handleDataUpdate = (type, data) => {
+    // 데이터 가져오기 함수
+    const fetchAllData = async () => {
       if (!mounted) return;
 
-      switch (type) {
-        case 'dashboard':
-          setDashboardData(data);
+      try {
+        setConnectionStatus('connecting');
+        
+        // 병렬로 모든 데이터 가져오기
+        const [dashboardData, kpiData, environmentData, conveyorData] = await Promise.all([
+          apiService.getDashboardData(),
+          apiService.getRealTimeKPI(),
+          apiService.getCurrentEnvironment(),
+          apiService.getConveyorStatus()
+        ]);
+
+        if (mounted) {
+          setDashboardData({
+            ...dashboardData,
+            kpi: kpiData,
+            environment: environmentData,
+            conveyor: conveyorData
+          });
           setConnectionStatus('connected');
-          break;
-        case 'stations':
-          setStationsData(data);
-          break;
-        case 'error':
+          setLastUpdated(new Date());
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('API 연결 실패:', error);
+        if (mounted) {
           setConnectionStatus('error');
-          break;
+          setLoading(false);
+        }
       }
-      setLastUpdated(new Date());
-      setLoading(false);
     };
 
-    // 서비스 구독
-    const unsubscribe = dashboardService.subscribe(handleDataUpdate);
+    // 초기 데이터 로드
+    fetchAllData();
 
-    // 폴링 시작
-    dashboardService.startPolling(3000); // 3초마다 업데이트
+    // 3초마다 폴링
+    pollingInterval = setInterval(fetchAllData, 3000);
 
     // 초기 로딩 타이머
     const loadingTimer = setTimeout(() => {
@@ -55,8 +72,9 @@ const Dashboard = () => {
 
     return () => {
       mounted = false;
-      unsubscribe();
-      dashboardService.stopPolling();
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
       clearTimeout(loadingTimer);
     };
   }, []);
@@ -137,7 +155,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">OEE(설비 종합 효율)</h3>
                       <ProductionStatus 
-                        oee={dashboardData?.kpi?.oee || 0}
+                        oee={dashboardData?.kpi?.calculated_oee || dashboardData?.kpi?.oee || 0}
                       />
                     </div>
                   </div>
@@ -148,7 +166,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">OTD(정기납기율)</h3>
                       <OTDStatus 
-                        otd={dashboardData?.kpi?.otd || 0}
+                        otd={dashboardData?.kpi?.calculated_otd || dashboardData?.kpi?.otd || 0}
                       />
                     </div>
                   </div>
@@ -159,7 +177,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">FTY(일발양품률)</h3>
                       <FTYStatus 
-                        fty={dashboardData?.kpi?.fty || 0}
+                        fty={dashboardData?.kpi?.calculated_fty || dashboardData?.kpi?.fty || 0}
                       />
                     </div>
                   </div>

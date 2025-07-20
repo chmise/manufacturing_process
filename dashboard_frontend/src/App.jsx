@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import Factory3D from './components/Factory3D'
 import Inventory from './components/Inventory'
+import ApiTest from './components/ApiTest'
 
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/factory3d" element={<Factory3D />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/api-test" element={<ApiTest />} />
         </Routes>
       </Layout>
     </BrowserRouter>
