@@ -38,7 +38,7 @@ public class StockController {
         return stockService.getMonthlyChartData();
     }
 
-    // 차량별 재고 요약 데이터 반환 (도넛 차트용)
+    // 차량별 재고 요약 데이터 반환 (도넛 차트용, 차 이름 기반)
     @GetMapping("/stocks/summary")
     public List<StockSummaryDTO> getStockSummary() {
         return stockService.getStockSummary();

@@ -87,7 +87,7 @@ const SummaryCard = () => {
         fontWeight: 'bold',
         color: '#1f2937'
       }}>
-        차량 발주 (단위 = 1만)
+        차 이름
       </div>
 
       {/* 도넛 차트 */}

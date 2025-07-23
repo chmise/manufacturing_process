@@ -2,7 +2,7 @@ package com.u1mobis.dashboard_backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,4 +25,8 @@ public class Stock {
     private String partnerCompany;
     private LocalDateTime inboundDate;
     private String stockState;
+
+    // ✅ 차량 이름 필드
+    @Column(name = "car_model")
+    private String carModel;
 }
