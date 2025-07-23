@@ -653,24 +653,7 @@ const Factory3DTwin = () => {
         </div>
       )}
 
-      {/* 백그라운드 실행 상태 표시 */}
-      {(isUnityLoaded && window.unityGlobalState?.instance) && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            backgroundColor: 'rgba(40, 167, 69, 0.9)',
-            color: 'white',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            fontWeight: 'bold'
-          }}
-        >
-          🟢 백그라운드 실행 중
-        </div>
-      )}
+      
     </div>
   );
 };

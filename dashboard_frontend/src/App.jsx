@@ -5,9 +5,11 @@ import Dashboard from './components/Dashboard'
 import Factory3D from './components/Factory3D'
 import Inventory from './components/Inventory'
 import ApiTest from './components/ApiTest'
+
 import Login from './components/Login'
 import Register from './components/Register'  // Register 컴포넌트 import 추가
 import ProtectedRoute from './components/ProtectedRoute'
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -26,6 +28,7 @@ function App() {
 
   return (
     <BrowserRouter>
+
       <Routes>
         {/* 최초 진입 시 로그인 페이지로 리디렉션 */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -49,6 +52,7 @@ function App() {
           }
         />
       </Routes>
+
     </BrowserRouter>
   )
 }

@@ -41,7 +41,7 @@ const PowerEfficiency = () => {
                   fontSize: '18px',
                   fontWeight: 600,
                   label: '전력효율',
-                  formatter: function (w) {
+                  formatter: function () {
                     return '73.5%';
                   }
                 }

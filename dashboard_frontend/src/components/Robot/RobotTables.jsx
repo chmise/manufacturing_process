@@ -184,7 +184,7 @@ const RobotTable = ({ stationsData = [], lastUpdated }) => {
             </tr>
           </thead>
           <tbody>
-            {robots.map((robot, index) => (
+            {robots.map((robot) => (
               <tr key={robot.id}>
                 <th className="text-primary">{robot.id}</th>
                 <td>

@@ -7,43 +7,59 @@ import HourlyProduction from './KPI/HourlyProduction';
 import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
 import InventoryStatus from './Inventory/InventoryTables';
-import dashboardService from '../service/dashboardService';
+import apiService from '../service/apiService';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
-  const [stationsData, setStationsData] = useState([]);
+  const [stationsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [connectionStatus, setConnectionStatus] = useState('connecting');
 
   useEffect(() => {
     let mounted = true;
+    let pollingInterval;
 
-    // 데이터 업데이트 핸들러
-    const handleDataUpdate = (type, data) => {
+    // 데이터 가져오기 함수
+    const fetchAllData = async () => {
       if (!mounted) return;
 
-      switch (type) {
-        case 'dashboard':
-          setDashboardData(data);
+      try {
+        setConnectionStatus('connecting');
+        
+        // 병렬로 모든 데이터 가져오기
+        const [dashboardData, kpiData, environmentData, conveyorData] = await Promise.all([
+          apiService.getDashboardData(),
+          apiService.getRealTimeKPI(),
+          apiService.getCurrentEnvironment(),
+          apiService.getConveyorStatus()
+        ]);
+
+        if (mounted) {
+          setDashboardData({
+            ...dashboardData,
+            kpi: kpiData,
+            environment: environmentData,
+            conveyor: conveyorData
+          });
           setConnectionStatus('connected');
-          break;
-        case 'stations':
-          setStationsData(data);
-          break;
-        case 'error':
+          setLastUpdated(new Date());
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('API 연결 실패:', error);
+        if (mounted) {
           setConnectionStatus('error');
-          break;
+          setLoading(false);
+        }
       }
-      setLastUpdated(new Date());
-      setLoading(false);
     };
 
-    // 서비스 구독
-    const unsubscribe = dashboardService.subscribe(handleDataUpdate);
+    // 초기 데이터 로드
+    fetchAllData();
 
-    // 폴링 시작
-    dashboardService.startPolling(3000); // 3초마다 업데이트
+    // 3초마다 폴링
+    pollingInterval = setInterval(fetchAllData, 3000);
 
     // 초기 로딩 타이머
     const loadingTimer = setTimeout(() => {
@@ -55,11 +71,12 @@ const Dashboard = () => {
 
     return () => {
       mounted = false;
-      unsubscribe();
-      dashboardService.stopPolling();
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
       clearTimeout(loadingTimer);
     };
-  }, []);
+  }, [loading]);
 
   // 연결 상태 표시
   const renderConnectionStatus = () => {
@@ -107,18 +124,18 @@ const Dashboard = () => {
               <div className="row g-3">
                 <div className="col-sm-12">
                   <ProductionTarget 
-                    current={dashboardData?.production?.current || 0}
-                    target={dashboardData?.production?.target || 1000}
+                    current={dashboardData?.production?.today_completed || 0}
+                    target={1000}
                   />
                 </div>
                 <div className="col-6">
                   <HourlyProduction 
-                    rate={dashboardData?.production?.hourlyRate || 0}
+                    rate={dashboardData?.production?.hourly_rate || 0}
                   />
                 </div>
                 <div className="col-6">
                   <CycleTime 
-                    time={dashboardData?.production?.cycleTime || 0}
+                    time={dashboardData?.production?.cycle_time || 0}
                   />
                 </div>
               </div>
@@ -232,7 +249,7 @@ const Dashboard = () => {
                 <div className="col-md-3">
                   <div className="text-muted small">전체 품질 점수</div>
                   <div className="h5 text-success">
-                    {(parseFloat(dashboardData?.quality?.overallScore || 0) * 100).toFixed(1)}%
+                    N/A
                   </div>
                 </div>
               </div>

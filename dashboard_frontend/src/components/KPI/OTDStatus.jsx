@@ -55,7 +55,7 @@ const OTDStatus = ({ otd = 92.5, otdData = null }) => {
                   fontSize: '18px',
                   fontWeight: 600,
                   label: 'OTD',
-                  formatter: function (w) {
+                  formatter: function () {
                     return otdValue.toFixed(1) + '%';
                   }
                 }

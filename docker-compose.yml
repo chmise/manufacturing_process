@@ -1,24 +1,61 @@
+version: '3.8'
+
 services:
   backend:
-    build: 
-      context: ./dashboard_backend  # 언더스코어 수정
+    build:
+      context: .
       dockerfile: Dockerfile
+      target: backend
     ports:
       - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+    deploy:
+      resources:
+        limits:
+          memory: 450M      # Spring Boot 메모리 제한
+          cpus: '0.8'       # CPU 제한
+        reservations:
+          memory: 200M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
-      - app-network
+      - factory-network
+    restart: unless-stopped
 
   frontend:
     build:
-      context: ./dashboard_frontend  # 언더스코어 수정
+      context: .
       dockerfile: Dockerfile
+      target: frontend
     ports:
-      - "3000:80"
-    networks:
-      - app-network
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 100M      # nginx 메모리 제한
+          cpus: '0.2'       # CPU 제한
+        reservations:
+          memory: 50M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - factory-network
+    restart: unless-stopped
 
 networks:
-  app-network:
+  factory-network:
     driver: bridge
