@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import DigitalTwinOverlay from './DigitalTwinOverlay';
 
 // 전역 Unity 상태 관리 (간단 버전)
 window.unityGlobalState = window.unityGlobalState || {
@@ -15,9 +16,18 @@ const Factory3DTwin = () => {
   const unityInstanceRef = useRef(null);
   const isLoadingRef = useRef(false);
   const progressIntervalRef = useRef(null);
+  
+  // 디지털 트윈 오버레이 상태
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayData, setOverlayData] = useState(null);
+  const [overlayType, setOverlayType] = useState(null);
+  const [overlayPosition, setOverlayPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     console.log('Factory3DTwin 마운트');
+    
+    // Unity 없이도 테스트 함수들을 사용할 수 있도록 설정
+    setupTestFunctions();
 
     // 전역 Unity 인스턴스가 이미 있는지 확인
     if (window.unityGlobalState.instance) {
@@ -405,7 +415,7 @@ const Factory3DTwin = () => {
       }
     };
 
-    // Unity에서 React로 데이터 수신
+    // Unity에서 React로 데이터 수신 (글로벌 함수)
     window.ReceiveFromUnity = (data) => {
       try {
         const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
@@ -415,16 +425,93 @@ const Factory3DTwin = () => {
         console.error('Unity 데이터 파싱 오류:', error);
       }
     };
+
+    // Unity에서 직접 호출할 수 있는 함수들
+    window.OnRobotClicked = (robotData) => {
+      console.log('로봇 클릭 이벤트:', robotData);
+      try {
+        const data = typeof robotData === 'string' ? JSON.parse(robotData) : robotData;
+        handleDigitalTwinClick('robot', data, data.position);
+      } catch (error) {
+        console.error('로봇 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    window.OnStationClicked = (stationData) => {
+      console.log('공정 클릭 이벤트:', stationData);
+      try {
+        const data = typeof stationData === 'string' ? JSON.parse(stationData) : stationData;
+        handleDigitalTwinClick('station', data, data.position);
+      } catch (error) {
+        console.error('공정 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    window.OnProductClicked = (productData) => {
+      console.log('제품 클릭 이벤트:', productData);
+      try {
+        const data = typeof productData === 'string' ? JSON.parse(productData) : productData;
+        handleDigitalTwinClick('product', data, data.position);
+      } catch (error) {
+        console.error('제품 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    // 테스트용 함수들 (개발 단계에서 사용)
+    window.TestRobotClick = () => {
+      const testData = {
+        robotId: 1,
+        position: { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+      };
+      handleDigitalTwinClick('robot', testData, testData.position);
+    };
+
+    window.TestStationClick = () => {
+      const testData = {
+        stationCode: 'A01',
+        position: { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+      };
+      handleDigitalTwinClick('station', testData, testData.position);
+    };
+
+    window.TestProductClick = () => {
+      const testData = {
+        productId: 'A01_PROD_001',
+        position: { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+      };
+      handleDigitalTwinClick('product', testData, testData.position);
+    };
+
+    console.log('✅ Unity-React 통신 함수들이 window 객체에 등록되었습니다:');
+    console.log('- window.OnRobotClicked(robotData)');
+    console.log('- window.OnStationClicked(stationData)');  
+    console.log('- window.OnProductClicked(productData)');
+    console.log('- window.TestRobotClick() (테스트용)');
+    console.log('- window.TestStationClick() (테스트용)');
+    console.log('- window.TestProductClick() (테스트용)');
   };
 
-  // Unity 데이터 처리
+  // Unity 데이터 처리 (ClickableObject.cs와 호환)
   const handleUnityData = (data) => {
+    console.log('Unity에서 받은 데이터:', data);
+    
     switch (data.type) {
+      case 'objectClicked':
+        console.log('오브젝트 클릭됨:', data.payload);
+        handleObjectClick(data.payload);
+        break;
       case 'robotClicked':
         console.log('로봇 클릭됨:', data.payload);
+        handleDigitalTwinClick('robot', data.payload, data.position);
         break;
+      case 'stationClicked':
       case 'processClicked':
         console.log('공정 클릭됨:', data.payload);
+        handleDigitalTwinClick('station', data.payload, data.position);
+        break;
+      case 'productClicked':
+        console.log('제품 클릭됨:', data.payload);
+        handleDigitalTwinClick('product', data.payload, data.position);
         break;
       case 'statusUpdate':
         console.log('상태 업데이트:', data.payload);
@@ -432,6 +519,136 @@ const Factory3DTwin = () => {
       default:
         console.log('기타 Unity 데이터:', data);
     }
+  };
+
+  // Unity ClickableObject에서 오는 일반 클릭 처리
+  const handleObjectClick = (payload) => {
+    const { objectId, objectType } = payload;
+    
+    // 화면 중앙 좌표 사용 (Unity에서 좌표를 보내지 않음)
+    const position = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    
+    switch (objectType) {
+      case 'robot':
+        // 로봇 클릭 - objectId에서 robotId 추출
+        const robotId = extractRobotId(objectId);
+        handleDigitalTwinClick('robot', { robotId }, position);
+        break;
+        
+      case 'station':
+        // 공정 클릭 - objectId에서 stationCode 추출  
+        const stationCode = extractStationCode(objectId);
+        handleDigitalTwinClick('station', { stationCode }, position);
+        break;
+        
+      case 'product':
+        // 제품 클릭 - Unity의 CAR_XXX 형태를 데이터베이스 productId로 변환
+        const productId = convertCarIdToProductId(objectId);
+        handleDigitalTwinClick('product', { productId }, position);
+        break;
+        
+      default:
+        console.log('알 수 없는 오브젝트 타입:', objectType);
+    }
+  };
+
+  // 유틸리티 함수들
+  const extractRobotId = (objectId) => {
+    // 예: "ROBOT_001" -> 1, "ARM_ROBOT_A01_001" -> 1
+    const match = objectId.match(/(\d+)$/);
+    return match ? parseInt(match[1]) : 1;
+  };
+
+  const extractStationCode = (objectId) => {
+    // 예: "STATION_A01" -> "A01", "ASSEMBLY_A01" -> "A01"
+    const match = objectId.match(/([A-D]\d{2})/);
+    return match ? match[1] : 'A01';
+  };
+
+  const convertCarIdToProductId = (objectId) => {
+    // Unity의 CAR_XXX 형태를 데이터베이스의 productId 형태로 변환
+    // 예: "CAR_001" -> "A01_PROD_001" (첫 번째 공정 제품으로 가정)
+    if (objectId.startsWith('CAR_')) {
+      const carNumber = objectId.replace('CAR_', '');
+      return `A01_PROD_${carNumber.padStart(3, '0')}`;
+    }
+    // 이미 올바른 형태라면 그대로 반환
+    return objectId;
+  };
+
+  // 디지털 트윈 클릭 이벤트 처리
+  const handleDigitalTwinClick = (type, payload, position) => {
+    console.log('디지털 트윈 클릭:', { type, payload, position });
+    
+    // 화면 좌표로 변환 (Unity에서 받은 좌표가 있다면 사용, 없으면 기본값)
+    const screenX = position?.x || window.innerWidth / 2;
+    const screenY = position?.y || window.innerHeight / 2;
+    
+    setOverlayType(type);
+    setOverlayData(payload);
+    setOverlayPosition({ x: screenX, y: screenY });
+    setOverlayOpen(true);
+  };
+
+  // 오버레이 닫기
+  const handleOverlayClose = () => {
+    setOverlayOpen(false);
+    setOverlayData(null);
+    setOverlayType(null);
+  };
+
+  // 테스트 함수들 설정 (Unity 없이도 사용 가능)
+  const setupTestFunctions = () => {
+    // 테스트용 함수들 (Unity ClickableObject 시뮬레이션)
+    window.TestRobotClick = () => {
+      // Unity ClickableObject 형태로 테스트
+      const testData = {
+        type: 'objectClicked',
+        payload: {
+          objectId: 'ROBOT_001',
+          objectType: 'robot'
+        }
+      };
+      handleUnityData(testData);
+    };
+
+    window.TestStationClick = () => {
+      // Unity ClickableObject 형태로 테스트
+      const testData = {
+        type: 'objectClicked',
+        payload: {
+          objectId: 'STATION_A01',
+          objectType: 'station'
+        }
+      };
+      handleUnityData(testData);
+    };
+
+    window.TestProductClick = () => {
+      // Unity CarSpawner에서 생성하는 차량 ID 형태로 테스트
+      const testData = {
+        type: 'objectClicked',
+        payload: {
+          objectId: 'CAR_001',
+          objectType: 'product'
+        }
+      };
+      handleUnityData(testData);
+    };
+
+    // Unity에서 직접 차량 클릭 테스트
+    window.TestCarClick = (carId = 'CAR_001') => {
+      const testData = {
+        type: 'objectClicked',
+        payload: {
+          objectId: carId,
+          objectType: 'product'
+        }
+      };
+      handleUnityData(testData);
+    };
+
+    console.log('✅ 테스트 함수들이 등록되었습니다 (Unity 불필요)');
   };
 
   const handleRetry = () => {
@@ -638,21 +855,107 @@ const Factory3DTwin = () => {
             width: '100%',
             height: '100%',
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             backgroundColor: '#2c3e50',
             color: 'white',
-            fontSize: '18px'
+            fontSize: '18px',
+            position: 'relative'
           }}
         >
-          Unity 3D 뷰어 (백그라운드 실행)
-          <br />
-          <small style={{ marginTop: '10px', display: 'block', opacity: 0.7 }}>
-            Unity 씬이 여기에 표시됩니다
-          </small>
+          <div style={{ marginBottom: '20px' }}>
+            Unity 3D 뷰어 (백그라운드 실행)
+            <br />
+            <small style={{ marginTop: '10px', display: 'block', opacity: 0.7 }}>
+              Unity 씬이 여기에 표시됩니다
+            </small>
+          </div>
+          
+          {/* 테스트 버튼들 (Unity가 없을 때만 표시) */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={() => window.TestRobotClick && window.TestRobotClick()}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              🤖 로봇 테스트
+            </button>
+            <button
+              onClick={() => window.TestStationClick && window.TestStationClick()}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: '#2196F3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              🏭 공정 테스트
+            </button>
+            <button
+              onClick={() => window.TestProductClick && window.TestProductClick()}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: '#FF9800',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              📦 제품 테스트
+            </button>
+            <button
+              onClick={() => window.TestCarClick && window.TestCarClick('CAR_005')}
+              style={{
+                padding: '10px 15px',
+                backgroundColor: '#9C27B0',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              🚗 차량 테스트
+            </button>
+          </div>
+          
+          <div style={{ 
+            marginTop: '20px', 
+            fontSize: '12px', 
+            opacity: 0.7,
+            textAlign: 'center'
+          }}>
+            위 버튼들을 클릭하여 디지털 트윈 오버레이를 테스트할 수 있습니다
+          </div>
         </div>
       )}
 
+      {/* 디지털 트윈 오버레이 */}
+      <DigitalTwinOverlay
+        isOpen={overlayOpen}
+        onClose={handleOverlayClose}
+        clickType={overlayType}
+        clickData={overlayData}
+        position={overlayPosition}
+      />
       
     </div>
   );

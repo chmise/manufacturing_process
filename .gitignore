@@ -101,3 +101,7 @@ dashboard_backend/dashboard-backend-1753253695990-tcplocalhost1883/.lck
 dashboard_frontend/package-lock.json
 dashboard_frontend/package.json
 CLAUDE.md
+
+
+/Scripts/*
+.claude/*
