@@ -22,19 +22,19 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
       switch (clickType) {
         case 'robot':
           if (clickData.robotId) {
-            result = await apiService.get(`/digital-twin/robot-status/${clickData.robotId}`);
+            result = await apiService.get(`/click/robot/${clickData.robotId}`);
           }
           break;
           
         case 'station':
           if (clickData.stationCode) {
-            result = await apiService.get(`/digital-twin/station/${clickData.stationCode}/status`);
+            result = await apiService.get(`/click/station/${clickData.stationCode}`);
           }
           break;
           
         case 'product':
           if (clickData.productId) {
-            result = await apiService.get(`/digital-twin/product-position/${clickData.productId}`);
+            result = await apiService.get(`/click/product/${clickData.productId}`);
           }
           break;
           

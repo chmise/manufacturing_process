@@ -98,6 +98,46 @@ export const apiService = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.json();
+  },
+
+  // 클릭 이벤트 처리 함수들
+  clickEvent: {
+    // 통합 클릭 이벤트 처리
+    handleObjectClick: async (objectType, objectId) => {
+      const response = await fetch(`${API_BASE_URL}/click/object`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          objectType: objectType,
+          objectId: objectId
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+
+    // 로봇 상태 조회
+    getRobotStatus: async (robotId) => {
+      const response = await fetch(`${API_BASE_URL}/click/robot/${robotId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+
+
+    // 공정 정보 조회
+    getStationInfo: async (stationId) => {
+      const response = await fetch(`${API_BASE_URL}/click/station/${stationId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
   }
 };
 

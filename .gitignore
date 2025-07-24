@@ -30,11 +30,10 @@ dashboard_backend/bin/
 dashboard_frontend/dist/
 dashboard_frontend/build/
 dashboard_frontend/.env*
-dashboard_frontend/package*.json
 
 # 전역 패키지 파일 (기존 유지)
-package-lock.json
-package.json
+
+
 
 # ==== IDE & EDITOR FILES ====
 # IntelliJ IDEA
@@ -80,6 +79,7 @@ Thumbs.db
 *.log
 .tmp.driveupload/
 .tmp.drivedownload/
+nul
 
 # MQTT 임시 파일
 dashboard_backend/dashboard-backend-*-tcplocalhost*

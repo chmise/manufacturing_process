@@ -19,7 +19,7 @@ public class UserService {
         if (userRepository.findByUserName(userDTO.getUsername()) != null) {
             return false; // 이미 존재
         }
-        User user = new User(null, userDTO.getUsername(), passwordEncoder.encode(userDTO.getPassword()));
+        User user = new User((Long) null, userDTO.getUsername(), passwordEncoder.encode(userDTO.getPassword()));
         userRepository.save(user);
         return true;
     }
