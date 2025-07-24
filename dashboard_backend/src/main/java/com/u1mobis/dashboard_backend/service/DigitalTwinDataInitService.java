@@ -35,101 +35,97 @@ public class DigitalTwinDataInitService implements CommandLineRunner {
             initializeRobotData();
         }
         
+        if (robotStatusRepository.count() == 0) {
+            initializeRobotStatusData();
+        }
+        
         if (productPositionRepository.count() == 0) {
             initializeProductData();
         }
         
-        System.out.println("✅ 디지털 트윈 샘플 데이터 초기화 완료");
+        System.out.println("✅ 디지털 트윈 샘플 데이터 초기화 완료 (DoorStation → WaterLeakTestStation)");
     }
     
     private void initializeRobotData() {
-        // 각 공정별 로봇 데이터 생성
+        // 2개 공정에만 로봇 데이터 생성: DoorStation → WaterLeakTestStation
         String[][] stationRobots = {
-            {"A01", "도어 탈거", "KUKA", "ABB", "Fanuc"},
-            {"A02", "와이어링", "KUKA", "Universal", "ABB", "Fanuc"},
-            {"A03", "헤드라이너", "ABB", "KUKA"},
-            {"A04", "크래쉬패드", "Fanuc", "Universal", "KUKA", "ABB", "Fanuc"},
-            {"B01", "연료탱크", "ABB", "KUKA"},
-            {"B02", "샤시 메리지", "Fanuc", "Universal", "ABB", "KUKA"},
-            {"B03", "머플러", "Universal", "Fanuc"},
-            {"C01", "FEM", "KUKA", "ABB", "Fanuc"},
-            {"C02", "글라스", "ABB", "Fanuc", "Universal"},
-            {"C03", "시트", "KUKA", "ABB", "Fanuc"},
-            {"C04", "범퍼", "Universal", "KUKA"},
-            {"C05", "타이어", "Universal", "KUKA"},
-            {"D01", "휠 얼라이언트", "KUKA", "Universal", "Fanuc"},
-            {"D02", "헤드램프", "Fanuc", "ABB"},
-            {"D03", "수밀검사", "ABB", "Fanuc", "Universal", "KUKA"}
+            {"DOOR_STATION", "도어 스테이션", "arm1", "arm2"},
+            {"WATER_LEAK_TEST_STATION", "누수 검사 스테이션", "arm1", "arm2"}
         };
-        
-        Long robotId = 1L;
         
         for (String[] stationData : stationRobots) {
             String stationCode = stationData[0];
+            String stationName = stationData[1];
             
-            // 각 공정의 로봇들 생성 (첫 번째 요소는 공정 코드, 나머지는 로봇 타입)
-            for (int i = 1; i < stationData.length; i++) {
-                String robotType = stationData[i];
+            // 각 공정에 2개의 로봇 생성 (arm1, arm2)
+            for (int i = 2; i < stationData.length; i++) {
+                String robotName = stationData[i];
                 
-                // 로봇 기본 정보 저장
+                // 데이터베이스 스키마에 맞는 로봇 기본 정보 저장
                 Robot robot = Robot.builder()
-                    .robotId(robotId)
-                    .robotName("로봇" + robotId)
-                    .companyId(1L) // 현대차
+                    .robotName(robotName)
+                    .companyId(1L) // 현대차 (companies 테이블의 company_id)
                     .stationCode(stationCode)
-                    .robotType(robotType)
+                    .robotType("ASSEMBLY") // 조립용 로봇
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
                 
-                robotRepository.save(robot);
-                
-                // 로봇 상태 정보 저장
-                int motorStatus = random.nextBoolean() ? 1 : 0;
-                int ledStatus = random.nextBoolean() ? 1 : 0;
-                
-                RobotStatus robotStatus = RobotStatus.builder()
-                    .robotId(robotId)
-                    .companyId(1L)
-                    .motorStatus(motorStatus)
-                    .ledStatus(ledStatus)
-                    .timestamp(LocalDateTime.now().minusMinutes(random.nextInt(30)))
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-                
-                robotStatusRepository.save(robotStatus);
-                
-                robotId++;
+                Robot savedRobot = robotRepository.save(robot);
+                System.out.println("🤖 로봇 생성: " + robotName + " (" + stationName + ") - ID: " + savedRobot.getRobotId());
             }
         }
         
-        System.out.println("📊 로봇 데이터 " + (robotId - 1) + "개 생성 완료");
+        System.out.println("📊 2개 공정 로봇 데이터 생성 완료");
+    }
+    
+    private void initializeRobotStatusData() {
+        // 생성된 모든 로봇에 대해 상태 데이터 생성
+        for (Robot robot : robotRepository.findAll()) {
+            int motorStatus = random.nextInt(100); // 0-99 범위의 모터 상태
+            int ledStatus = random.nextBoolean() ? 1 : 0; // LED 켜짐(1) 또는 꺼짐(0)
+            
+            RobotStatus robotStatus = RobotStatus.builder()
+                .robotId(robot.getRobotId())
+                .companyId(robot.getCompanyId())
+                .motorStatus(motorStatus)
+                .ledStatus(ledStatus)
+                .timestamp(LocalDateTime.now().minusMinutes(random.nextInt(30)))
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+            
+            robotStatusRepository.save(robotStatus);
+            System.out.println("📊 로봇 상태 생성: Robot ID " + robot.getRobotId() + " - Motor: " + motorStatus + ", LED: " + ledStatus);
+        }
+        
+        System.out.println("📊 로봇 상태 데이터 생성 완료");
     }
     
     private void initializeProductData() {
-        String[] statuses = {"PROCESSING", "WAITING", "COMPLETED", "ERROR"};
-        String[] stationCodes = {
-            "A01", "A02", "A03", "A04",
-            "B01", "B02", "B03",
-            "C01", "C02", "C03", "C04", "C05",
-            "D01", "D02", "D03"
-        };
+        String[] statuses = {"IN_PROGRESS", "WAITING", "COMPLETED", "DEFECTIVE"};
+        String[] stationCodes = {"DOOR_STATION", "WATER_LEAK_TEST_STATION"};
+        String[] carModels = {"SONATA", "GRANDEUR", "TUCSON", "SANTA_FE"};
         
-        // 각 공정마다 1-3개의 제품 생성
+        // 2개 공정에만 제품 위치 데이터 생성
         for (String stationCode : stationCodes) {
-            int productCount = random.nextInt(3) + 1; // 1~3개
+            int productCount = random.nextInt(3) + 2; // 2~4개 제품
             
             for (int i = 0; i < productCount; i++) {
-                String productId = stationCode + "_PROD_" + String.format("%03d", i + 1);
+                String carModel = carModels[random.nextInt(carModels.length)];
+                String productId = stationCode + "_" + carModel + "_" + String.format("%03d", i + 1);
+                
+                // 스테이션별 위치 설정
+                double baseX = stationCode.equals("DOOR_STATION") ? 10.0 : 50.0;
+                double baseY = stationCode.equals("DOOR_STATION") ? 5.0 : 15.0;
                 
                 ProductPosition productPosition = ProductPosition.builder()
-                    .companyId(1L) // 현대차
+                    .companyId(1L) // 현대차 (companies 테이블의 company_id)
                     .productId(productId)
                     .stationCode(stationCode)
-                    .xPosition(random.nextDouble() * 100) // 0~100 범위
-                    .yPosition(random.nextDouble() * 100)
-                    .zPosition(random.nextDouble() * 10)  // 0~10 범위
+                    .xPosition(baseX + (random.nextDouble() * 10)) // 스테이션 기준 위치
+                    .yPosition(baseY + (random.nextDouble() * 10))
+                    .zPosition(random.nextDouble() * 3)  // 0~3 범위
                     .status(statuses[random.nextInt(statuses.length)])
                     .timestamp(LocalDateTime.now().minusMinutes(random.nextInt(60)))
                     .createdAt(LocalDateTime.now())
@@ -137,9 +133,10 @@ public class DigitalTwinDataInitService implements CommandLineRunner {
                     .build();
                 
                 productPositionRepository.save(productPosition);
+                System.out.println("📦 제품 생성: " + productId + " - " + stationCode + " (" + productPosition.getStatus() + ")");
             }
         }
         
-        System.out.println("📦 제품 위치 데이터 생성 완료");
+        System.out.println("📦 2개 공정 제품 위치 데이터 생성 완료");
     }
 }
