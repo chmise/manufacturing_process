@@ -1,107 +1,98 @@
-# Spring Boot (dashboard-backend)
-dashboard-backend/build/
-dashboard-backend/.gradle/
-dashboard-backend/out/
-dashboard-backend/bin/
-dashboard-backend/.settings/
-dashboard-backend/.project
-dashboard-backend/.classpath
-dashboard-backend/src/main/resources/application.properties
+# ==== BUILD & DEPENDENCY FILES ====
+# Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+gradle.properties*
 
-# Python bytecode
+# Node.js
+**/node_modules/
+*-debug.log*
+*-error.log*
+.pnpm-debug.log*
+
+# Python )
 *.pyc
 *.pyo
 __pycache__/
 
-# Node.js (전역)
-node_modules/
-package-lock.json
-package.json
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# React (dashboard-frontend)
-dashboard-frontend/node_modules/
-dashboard-frontend/dist/
-dashboard-frontend/build/
-dashboard-frontend/.env
-dashboard-frontend/.env.local
-dashboard-frontend/.env.development.local
-dashboard-frontend/.env.test.local
-dashboard-frontend/.env.production.local
-
-# IDE 설정
-.vscode/
-.idea/
-*.iml
-*.swp
-*.swo
-
-# OS 생성 파일
-.DS_Store
-Thumbs.db
-*.log
-
-# 임시 파일
-.tmp.driveupload/
-.tmp.drivedownload/
-
-# 보안 관련
-*.key
-*.pem
-*.crt
-secrets/
-
-# Gradle properties (local environment specific)
-gradle.propertiesvenv/
-gradle.properties
-
-HELP.md
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
+# ==== APPLICATION SPECIFIC ====
+# Spring Boot Backend
+dashboard_backend/src/main/resources/application.properties
+dashboard_backend/out/
+dashboard_backend/bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
+# React Frontend
+dashboard_frontend/dist/
+dashboard_frontend/build/
+dashboard_frontend/.env*
+dashboard_frontend/package*.json
+
+# 전역 패키지 파일 (기존 유지)
+package-lock.json
+package.json
+
+# ==== IDE & EDITOR FILES ====
+# IntelliJ IDEA
+.idea/
 *.iml
+*.iws
 *.ipr
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
-### NetBeans ###
-/nbproject/private/
+# Eclipse/STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# VS Code
+.vscode/
+
+# NetBeans
+/nbproject/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
-/node_modules/.*
-dashboard_backend/dashboard-backend-1753070613796-tcplocalhost1883/.lck
-dashboard_backend/dashboard-backend-1753253695990-tcplocalhost1883/.lck
-dashboard_frontend/package-lock.json
-dashboard_frontend/package.json
+# Vim/기타 에디터
+*.swp
+*.swo
+
+# ==== OS & SYSTEM FILES ====
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# ==== TEMPORARY & LOG FILES ====
+*.log
+.tmp.driveupload/
+.tmp.drivedownload/
+
+# MQTT 임시 파일
+dashboard_backend/dashboard-backend-*-tcplocalhost*
+
+# ==== SECURITY & SECRETS ====
+*.key
+*.pem
+*.crt
+secrets/
+
+# ==== DOCUMENTATION & MISC ====
+HELP.md
+
+# Claude AI (기존 유지하되 수정)
+.claude/
 CLAUDE.md
-
-
-# Claude AI
-.claude/*
