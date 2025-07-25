@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -37,6 +38,12 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
 
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+
+    @Column(name = "birth", nullable = false)
+    private LocalDate birth;
+
     // 외래키 관계 설정
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
@@ -48,10 +55,12 @@ public class User {
     }
 
     // 비즈니스 로직에 필요한 생성자
-    public User(Company company, String userName, String password) {
+    public User(Company company, String userName, String password, String email, LocalDate birth) {
         this.company = company;
         this.userName = userName;
         this.password = password;
+        this.email = email;
+        this.birth = birth;
     }
 
     // 기존 코드 호환성을 위한 생성자
