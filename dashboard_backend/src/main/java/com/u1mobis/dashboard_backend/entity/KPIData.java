@@ -27,6 +27,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "kpi_data")
 @Data
 @Builder
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class KPIData {
