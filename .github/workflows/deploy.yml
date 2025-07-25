@@ -9,7 +9,7 @@ env:
   DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
   
-  APP_DOCKER_IMAGE_NAME: impelfin/restful_app 
+  APP_DOCKER_IMAGE_NAME: arims0522/factory
 
   AWS_REGION: ap-northeast-2 
   EC2_HOST: ${{ secrets.HOST }} 
@@ -33,8 +33,8 @@ jobs:
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v5
       with:
-        context: ./nodejs/restful
-        file: ./nodejs/restful/Dockerfile 
+        context: ./
+        file: ./Dockerfile 
         push: true
         tags: ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
 
@@ -52,7 +52,7 @@ jobs:
           docker stop restful_app || true 
           docker rm restful_app || true 
           echo "--- Running New App Container ---"
-          docker run -d --restart always --name restful_app -p 8000:8000 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
+          docker run -d --restart always --name factory -p 8000:8000 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
           
           echo "--- Cleaning up unused Docker images ---"
           docker system prune -f
