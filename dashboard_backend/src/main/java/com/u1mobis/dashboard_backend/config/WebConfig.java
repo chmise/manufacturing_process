@@ -14,12 +14,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(
-                    "http://localhost:5173",  // Vite React 개발 서버
-                    "http://localhost:5174",  // Vite React 개발 서버 (대체 포트)
-                    "http://localhost:5175",  // Vite React 개발 서버 (대체 포트)
-                    "http://localhost:3000",  // Create React App 개발 서버
-                    "http://localhost:8080"   // 동일 포트 허용
+                .allowedOriginPatterns(
+                    "http://localhost:*",     // 로컬호스트 모든 포트 허용
+                    "https://localhost:*"     // HTTPS 로컬호스트 허용
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

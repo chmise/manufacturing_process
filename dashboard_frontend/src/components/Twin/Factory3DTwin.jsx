@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import DigitalTwinOverlay from './DigitalTwinOverlay';
 
 // 전역 Unity 상태 관리 (간단 버전)
 window.unityGlobalState = window.unityGlobalState || {
@@ -15,13 +16,37 @@ const Factory3DTwin = () => {
   const unityInstanceRef = useRef(null);
   const isLoadingRef = useRef(false);
   const progressIntervalRef = useRef(null);
+  
+  // 디지털 트윈 오버레이 상태
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayData, setOverlayData] = useState(null);
+  const [overlayType, setOverlayType] = useState(null);
+  const [overlayPosition, setOverlayPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    console.log('Factory3DTwin 마운트');
+    // Unity 통신 설정
+    setupTestFunctions();
+    
+    // 로그인된 사용자의 회사명 자동 설정
+    const setCompanyNameFromUserData = () => {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.companyName && window.SetCompanyName) {
+            setTimeout(() => {
+              window.SetCompanyName(user.companyName);
+              console.log(`자동으로 회사명 설정: ${user.companyName}`);
+            }, 2000); // Unity 로딩 완료 후 설정
+          }
+        } catch (error) {
+          console.error('사용자 데이터 파싱 오류:', error);
+        }
+      }
+    };
 
     // 전역 Unity 인스턴스가 이미 있는지 확인
     if (window.unityGlobalState.instance) {
-      console.log('✅ 기존 Unity 인스턴스 재사용');
       unityInstanceRef.current = window.unityGlobalState.instance;
       setIsUnityLoaded(true);
       setLoadingProgress(100);
@@ -65,18 +90,19 @@ const Factory3DTwin = () => {
           }
         }, 100);
       }
+      
+      // 기존 Unity 인스턴스에서도 회사명 설정
+      setCompanyNameFromUserData();
       return;
     }
 
     const loadUnity = async () => {
       // 이미 로딩 중이거나 로드된 경우 중복 방지
       if (isLoadingRef.current || window.unityGlobalState.isLoaded) {
-        console.log('Unity 이미 로드됨 또는 로딩 중 - 스킵');
         return;
       }
 
       try {
-        console.log('Unity 로드 시작...');
         isLoadingRef.current = true;
         setErrorMessage('');
 
@@ -96,13 +122,10 @@ const Factory3DTwin = () => {
           codeUrl: `${buildUrl}/factoryTwin.wasm`
         };
 
-        console.log('Unity 설정:', config);
-
-        // Unity 로더 방식 확인
+        // Unity 인스턴스 로드
         const loadUnityInstance = () => {
           // 컴포넌트가 언마운트되었는지 확인
           if (!isLoadingRef.current) {
-            console.log('컴포넌트 언마운트됨 - Unity 로딩 중단');
             return;
           }
 
@@ -119,42 +142,33 @@ const Factory3DTwin = () => {
 
           // Unity 인스턴스 생성
           if (typeof window.createUnityInstance !== 'undefined') {
-            console.log('createUnityInstance 사용');
-            
             window.createUnityInstance(canvas, config, (progress) => {
               const progressPercent = progress * 100;
               setLoadingProgress(progressPercent);
             }).then((unityInstance) => {
               // 로딩 중에 컴포넌트가 언마운트되었는지 확인
               if (!isLoadingRef.current) {
-                console.log('컴포넌트 언마운트됨 - Unity 인스턴스 정리');
                 if (unityInstance && typeof unityInstance.Quit === 'function') {
                   try {
                     unityInstance.Quit();
                   } catch (e) {
-                    console.log('Unity 정리 중 오류 (무시됨):', e.message);
+                    // Unity 정리 중 오류 무시
                   }
                 }
                 return;
               }
-
-              console.log('✅ Unity 로드 성공! 백그라운드 실행 설정');
               
-              // 백그라운드 실행을 위한 설정 (전체화면 방지)
+              // Unity 백그라운드 실행 설정
               if (unityInstance.Module) {
                 unityInstance.Module.pauseMainLoop = false;
                 unityInstance.Module.noExitRuntime = true;
-                
-                // 전체화면 방지 설정
                 unityInstance.Module.requestFullscreen = false;
                 if (unityInstance.Module.canvas) {
                   unityInstance.Module.canvas.requestFullscreen = null;
                 }
-                
-                console.log('✅ Unity 백그라운드 실행 설정 완료 (전체화면 방지)');
               }
               
-              // 전역 상태에 저장 (백그라운드 실행을 위해)
+              // 전역 상태 저장
               window.unityGlobalState.instance = unityInstance;
               window.unityGlobalState.isLoaded = true;
               window.unityGlobalState.canvas = canvas;
@@ -168,6 +182,9 @@ const Factory3DTwin = () => {
               isLoadingRef.current = false;
               
               setupUnityReactCommunication(unityInstance);
+              
+              // Unity 로딩 완료 후 회사명 자동 설정
+              setCompanyNameFromUserData();
             }).catch((error) => {
               console.error('❌ Unity 로드 실패:', error);
               setErrorMessage(`Unity 로드 실패: ${error.message || error.toString()}`);
@@ -178,7 +195,6 @@ const Factory3DTwin = () => {
             });
           } else {
             // Unity 로더 대기
-            console.log('Unity 로더 대기 중...');
             setTimeout(loadUnityInstance, 1000);
           }
         };
@@ -197,7 +213,6 @@ const Factory3DTwin = () => {
           script.async = true;
           
           script.onload = () => {
-            console.log('Unity Framework 로드 완료');
             setTimeout(loadUnityInstance, 500);
           };
           
@@ -219,12 +234,10 @@ const Factory3DTwin = () => {
         loaderScript.async = true;
         
         loaderScript.onload = () => {
-          console.log('Unity Loader 로드 완료');
           loadFramework();
         };
         
         loaderScript.onerror = () => {
-          console.log('Loader 없음 - Framework 직접 로드');
           loadFramework();
         };
 
@@ -244,7 +257,6 @@ const Factory3DTwin = () => {
     const timer = setTimeout(loadUnity, 100);
 
     return () => {
-      console.log('Factory3DTwin 컴포넌트 언마운트 - Unity 인스턴스는 백그라운드에서 유지');
       clearTimeout(timer);
       isLoadingRef.current = false;
 
@@ -262,14 +274,12 @@ const Factory3DTwin = () => {
   // 컨테이너 변경 감지 및 Unity 재연결
   useEffect(() => {
     if (unityContainerRef.current && window.unityGlobalState.instance && isUnityLoaded) {
-      console.log('🔄 Unity 컨테이너 재연결 확인');
       
       const container = unityContainerRef.current;
       const canvas = window.unityGlobalState.canvas;
       
       // 캔버스가 현재 컨테이너에 없으면 재연결
       if (canvas && !container.contains(canvas)) {
-        console.log('🔧 Unity 캔버스 재연결 시작');
         
         // 기존 위치에서 제거
         if (canvas.parentNode) {
@@ -279,38 +289,34 @@ const Factory3DTwin = () => {
         // 새 컨테이너에 추가
         container.appendChild(canvas);
         
-        // Unity 강제 리프레시
+        // Unity 캔버스 재설정
         setTimeout(() => {
           if (window.unityGlobalState.instance) {
             try {
-              // Unity 해상도 및 렌더링 강제 업데이트
               const unityInstance = window.unityGlobalState.instance;
               
-              // 캔버스 크기 강제 설정
+              // 캔버스 크기 설정
               canvas.style.width = '100%';
               canvas.style.height = '100%';
               
-              // Unity Module 직접 조작
               if (unityInstance.Module) {
-                // WebGL 컨텍스트 강제 복원
+                // WebGL 컨텍스트 복원 시도
                 if (unityInstance.Module.canvas) {
                   const gl = unityInstance.Module.canvas.getContext('webgl') || 
                             unityInstance.Module.canvas.getContext('experimental-webgl');
                   if (gl && gl.isContextLost && gl.isContextLost()) {
-                    console.log('🔄 WebGL 컨텍스트 복원 시도');
+                    // WebGL 컨텍스트 복원 시도
                   }
                 }
                 
-                // Unity 렌더링 강제 재시작
+                // Unity 렌더링 재시작
                 unityInstance.Module.pauseMainLoop = false;
                 
-                // 화면 크기 변경 이벤트 강제 발생
+                // 애플리케이션 포커스 복원
                 if (typeof unityInstance.SendMessage === 'function') {
                   unityInstance.SendMessage('*', 'OnApplicationFocus', 'true');
                 }
               }
-              
-              console.log('✅ Unity 재연결 완료');
               
             } catch (error) {
               console.error('⚠️ Unity 재연결 중 오류 (무시됨):', error);
@@ -330,44 +336,38 @@ const Factory3DTwin = () => {
         window.unityGlobalState.instance.Module.pauseMainLoop = false;
         
         if (isVisible) {
-          console.log('👁️ 페이지 다시 보임 - Unity 활성화');
-          
-          // 페이지가 다시 보일 때 Unity 강제 리프레시
+          // 페이지가 다시 보일 때 Unity 복원
           setTimeout(() => {
             try {
               const unityInstance = window.unityGlobalState.instance;
               const canvas = window.unityGlobalState.canvas;
               
               if (unityInstance && canvas) {
-                // Unity에 포커스 복원 알림 (전체화면 제거)
+                // Unity 포커스 복원
                 if (typeof unityInstance.SendMessage === 'function') {
                   unityInstance.SendMessage('*', 'OnApplicationFocus', 'true');
                   unityInstance.SendMessage('*', 'OnApplicationPause', 'false');
                 }
                 
-                // 렌더링 강제 재시작 (전체화면 없이)
+                // 렌더링 재시작
                 if (unityInstance.Module) {
                   unityInstance.Module.pauseMainLoop = false;
                   
-                  // WebGL 컨텍스트 확인 및 복원
+                  // WebGL 컨텍스트 복원
                   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
                   if (gl) {
                     gl.viewport(0, 0, canvas.width, canvas.height);
                   }
                   
-                  // 캔버스 크기만 조정 (전체화면 하지 않음)
+                  // 캔버스 크기 조정
                   canvas.style.width = '100%';
                   canvas.style.height = '100%';
                 }
-                
-                console.log('✅ Unity 페이지 복원 완료 (전체화면 없음)');
               }
             } catch (error) {
               console.error('⚠️ Unity 페이지 복원 중 오류 (무시됨):', error);
             }
           }, 100);
-        } else {
-          console.log('🔒 페이지 숨김 - Unity 백그라운드 실행 유지');
         }
       }
     };
@@ -375,10 +375,8 @@ const Factory3DTwin = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
     window.addEventListener('blur', () => {
-      if (window.unityGlobalState.instance && window.unityGlobalState.instance.Module) {
-        // 브라우저 포커스 잃어도 Unity 계속 실행
+      if (window.unityGlobalState.instance?.Module) {
         window.unityGlobalState.instance.Module.pauseMainLoop = false;
-        console.log('🌙 브라우저 포커스 잃음 - Unity 백그라운드 실행 유지');
       }
     });
 
@@ -391,52 +389,173 @@ const Factory3DTwin = () => {
 
   // Unity와 React 간 통신 설정
   const setupUnityReactCommunication = (unityInstance) => {
-    console.log('Unity-React 통신 설정');
-    
     // React에서 Unity로 데이터 전송
     window.SendToUnity = (gameObjectName, methodName, parameter) => {
       try {
         if (unityInstance && unityInstance.SendMessage) {
           unityInstance.SendMessage(gameObjectName, methodName, parameter);
-          console.log('Unity로 메시지 전송:', { gameObjectName, methodName, parameter });
         }
       } catch (error) {
         console.error('Unity 메시지 전송 실패:', error);
       }
     };
 
-    // Unity에서 React로 데이터 수신
+    // Unity에서 React로 데이터 수신 (글로벌 함수)
     window.ReceiveFromUnity = (data) => {
       try {
         const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-        console.log('Unity에서 받은 데이터:', parsedData);
         handleUnityData(parsedData);
       } catch (error) {
         console.error('Unity 데이터 파싱 오류:', error);
       }
     };
+
+    // Unity에서 직접 호출할 수 있는 함수들
+    window.OnRobotClicked = (robotData) => {
+      try {
+        const data = typeof robotData === 'string' ? JSON.parse(robotData) : robotData;
+        handleDigitalTwinClick('robot', data, data.position);
+      } catch (error) {
+        console.error('로봇 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    window.OnStationClicked = (stationData) => {
+      try {
+        const data = typeof stationData === 'string' ? JSON.parse(stationData) : stationData;
+        handleDigitalTwinClick('station', data, data.position);
+      } catch (error) {
+        console.error('공정 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    window.OnProductClicked = (productData) => {
+      try {
+        const data = typeof productData === 'string' ? JSON.parse(productData) : productData;
+        handleDigitalTwinClick('product', data, data.position);
+      } catch (error) {
+        console.error('제품 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    // 회사명 설정 함수 추가
+    window.SetCompanyName = (companyName) => {
+      try {
+        if (unityInstance && unityInstance.SendMessage) {
+          unityInstance.SendMessage('CompanyManager', 'SetCompanyName', companyName);
+          console.log(`Unity에 회사명 전송: ${companyName}`);
+        }
+      } catch (error) {
+        console.error('회사명 설정 실패:', error);
+      }
+    };
+
+    // Unity-React 통신 함수 등록 완료
   };
 
   // Unity 데이터 처리
   const handleUnityData = (data) => {
     switch (data.type) {
-      case 'robotClicked':
-        console.log('로봇 클릭됨:', data.payload);
+      case 'objectClicked':
+        handleObjectClick(data.payload);
         break;
+      case 'robotClicked':
+        handleDigitalTwinClick('robot', data.payload, data.position);
+        break;
+      case 'stationClicked':
       case 'processClicked':
-        console.log('공정 클릭됨:', data.payload);
+        handleDigitalTwinClick('station', data.payload, data.position);
+        break;
+      case 'productClicked':
+        handleDigitalTwinClick('product', data.payload, data.position);
         break;
       case 'statusUpdate':
-        console.log('상태 업데이트:', data.payload);
+        // 상태 업데이트 처리
         break;
       default:
-        console.log('기타 Unity 데이터:', data);
+        // 기타 Unity 데이터 처리
     }
   };
 
-  const handleRetry = () => {
-    console.log('Unity 재시도 시작');
+  // Unity ClickableObject에서 오는 일반 클릭 처리
+  const handleObjectClick = (payload) => {
+    const { objectId, objectType } = payload;
     
+    // 화면 중앙 좌표 사용 (Unity에서 좌표를 보내지 않음)
+    const position = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    
+    switch (objectType) {
+      case 'robot':
+        // 로봇 클릭 - objectId에서 robotId 추출
+        const robotId = extractRobotId(objectId);
+        handleDigitalTwinClick('robot', { robotId }, position);
+        break;
+        
+      case 'station':
+        // 공정 클릭 - objectId에서 stationCode 추출  
+        const stationCode = extractStationCode(objectId);
+        handleDigitalTwinClick('station', { stationCode }, position);
+        break;
+        
+      case 'product':
+        // 제품 클릭 - Unity의 CAR_XXX 형태를 데이터베이스 productId로 변환
+        const productId = convertCarIdToProductId(objectId);
+        handleDigitalTwinClick('product', { productId }, position);
+        break;
+        
+      default:
+        break;
+    }
+  };
+
+  // 유틸리티 함수들
+  const extractRobotId = (objectId) => {
+    // 예: "ROBOT_001" -> 1, "ARM_ROBOT_A01_001" -> 1
+    const match = objectId.match(/(\d+)$/);
+    return match ? parseInt(match[1]) : 1;
+  };
+
+  const extractStationCode = (objectId) => {
+    // 예: "STATION_A01" -> "A01", "ASSEMBLY_A01" -> "A01"
+    const match = objectId.match(/([A-D]\d{2})/);
+    return match ? match[1] : 'A01';
+  };
+
+  const convertCarIdToProductId = (objectId) => {
+    // Unity의 CAR_XXX 형태를 데이터베이스의 productId 형태로 변환
+    // 예: "CAR_001" -> "A01_PROD_001" (첫 번째 공정 제품으로 가정)
+    if (objectId.startsWith('CAR_')) {
+      const carNumber = objectId.replace('CAR_', '');
+      return `A01_PROD_${carNumber.padStart(3, '0')}`;
+    }
+    // 이미 올바른 형태라면 그대로 반환
+    return objectId;
+  };
+
+  // 디지털 트윈 클릭 이벤트 처리
+  const handleDigitalTwinClick = (type, payload, position) => {
+    const screenX = position?.x || window.innerWidth / 2;
+    const screenY = position?.y || window.innerHeight / 2;
+    
+    setOverlayType(type);
+    setOverlayData(payload);
+    setOverlayPosition({ x: screenX, y: screenY });
+    setOverlayOpen(true);
+  };
+
+  // 오버레이 닫기
+  const handleOverlayClose = () => {
+    setOverlayOpen(false);
+    setOverlayData(null);
+    setOverlayType(null);
+  };
+
+  // Unity 통신 설정 초기화
+  const setupTestFunctions = () => {
+    // Unity-React 통신 함수 등록
+  };
+
+  const handleRetry = () => {
     // 전역 상태 리셋
     if (window.unityGlobalState.instance) {
       try {
@@ -444,15 +563,15 @@ const Factory3DTwin = () => {
           window.unityGlobalState.instance.Quit();
         }
       } catch (e) {
-        console.log('재시도 중 Unity 정리 오류 (무시됨):', e.message);
+        // Unity 정리 오류 무시
       }
     }
     
+    // 상태 초기화
     window.unityGlobalState.instance = null;
     window.unityGlobalState.isLoaded = false;
     window.unityGlobalState.canvas = null;
     
-    // 기존 상태 리셋
     setErrorMessage('');
     setLoadingProgress(0);
     setIsUnityLoaded(false);
@@ -465,32 +584,26 @@ const Factory3DTwin = () => {
       progressIntervalRef.current = null;
     }
     
-    // 기존 스크립트 제거
+    // Unity 스크립트 제거
     try {
       const scripts = document.querySelectorAll('script[src*="factoryTwin"]');
       scripts.forEach(script => {
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
+        script.parentNode?.removeChild(script);
       });
     } catch (e) {
-      console.log('스크립트 제거 중 오류 (무시됨):', e.message);
+      // 스크립트 제거 오류 무시
     }
     
     // 페이지 새로고침
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+    setTimeout(() => window.location.reload(), 500);
   };
 
   const handleSkipUnity = () => {
-    console.log('Unity 건너뛰기');
     setErrorMessage('');
     setIsUnityLoaded(true);
     setLoadingProgress(100);
     isLoadingRef.current = false;
     
-    // 진행률 타이머 정리
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
@@ -638,21 +751,47 @@ const Factory3DTwin = () => {
             width: '100%',
             height: '100%',
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             backgroundColor: '#2c3e50',
             color: 'white',
-            fontSize: '18px'
+            fontSize: '18px',
+            position: 'relative'
           }}
         >
-          Unity 3D 뷰어 (백그라운드 실행)
-          <br />
-          <small style={{ marginTop: '10px', display: 'block', opacity: 0.7 }}>
-            Unity 씬이 여기에 표시됩니다
-          </small>
+          <div style={{ marginBottom: '20px' }}>
+            Unity 3D 디지털 트윈
+            <br />
+            <small style={{ marginTop: '10px', display: 'block', opacity: 0.7 }}>
+              Unity 3D 팩토리 씬이 여기에 표시됩니다
+            </small>
+          </div>
+          
+          <div style={{ 
+            marginTop: '20px', 
+            fontSize: '14px', 
+            opacity: 0.8,
+            textAlign: 'center',
+            maxWidth: '400px'
+          }}>
+            클릭 가능한 오브젝트:
+            <br />
+            • 로봇 (Robot, Arm)
+            <br />
+            • 공정 설비 (Station, Assembly, Process)
+          </div>
         </div>
       )}
 
+      {/* 디지털 트윈 오버레이 */}
+      <DigitalTwinOverlay
+        isOpen={overlayOpen}
+        onClose={handleOverlayClose}
+        clickType={overlayType}
+        clickData={overlayData}
+        position={overlayPosition}
+      />
       
     </div>
   );

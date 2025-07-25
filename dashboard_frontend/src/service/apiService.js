@@ -74,6 +74,106 @@ export const apiService = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.json();
+  },
+
+  // 범용 GET 요청
+  get: async (endpoint) => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // 범용 POST 요청
+  post: async (endpoint, data) => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // 사용자 인증 API
+  user: {
+    // 로그인
+    login: async (credentials) => {
+      const response = await fetch(`${API_BASE_URL}/user/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+
+    // 회원가입
+    register: async (userData) => {
+      const response = await fetch(`${API_BASE_URL}/user/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
+  },
+
+  // 클릭 이벤트 처리 함수들
+  clickEvent: {
+    // 통합 클릭 이벤트 처리
+    handleObjectClick: async (objectType, objectId) => {
+      const response = await fetch(`${API_BASE_URL}/click/object`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          objectType: objectType,
+          objectId: objectId
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+
+    // 로봇 상태 조회
+    getRobotStatus: async (robotId) => {
+      const response = await fetch(`${API_BASE_URL}/click/robot/${robotId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+
+
+    // 공정 정보 조회
+    getStationInfo: async (stationId) => {
+      const response = await fetch(`${API_BASE_URL}/click/station/${stationId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
   }
 };
 

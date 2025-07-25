@@ -8,9 +8,6 @@
 manufacturing_process/
 ├── dashboard_backend/     # Spring Boot API 서버 (포트: 8080)
 ├── dashboard_frontend/    # React 대시보드 (포트: 5173)
-├── data_collector/        # Python 데이터 수집 서버 (포트: 8082)
-├── mosquitto_MQTT/        # MQTT 시뮬레이터 (15개 스테이션)
-├── venv/                  # Python 가상환경
 ├── start_macos.sh         # 🍎 macOS 자동 실행 스크립트
 └── start_windows.bat      # 🪟 Windows 자동 실행 스크립트
 ```
@@ -18,7 +15,6 @@ manufacturing_process/
 ## 기술 스택
 - **Backend**: Spring Boot 3.1.5, Java 17, Gradle
 - **Frontend**: React 18, Vite, Tabler.io
-- **Data Collector**: Python 3.8+, MQTT, InfluxDB
 - **Database**: PostgreSQL (메인), InfluxDB 3.x (시계열)
 - **MQTT Broker**: Mosquitto 2.0.21
 
@@ -32,9 +28,6 @@ manufacturing_process/
 
 ## 초기 설정 (한 번만)
 ```bash
-# Python 가상환경 생성
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 의존성 설치
 cd mosquitto_MQTT && pip install -r requirements.txt
@@ -102,19 +95,7 @@ cd dashboard_backend
 ./gradlew bootRun  # Windows: gradlew.bat bootRun
 ```
 
-### 4. 데이터 수집기 (터미널 3)
-```bash
-cd data_collector
-python main.py
-```
-
-### 5. MQTT 시뮬레이터 (터미널 4)
-```bash
-cd mosquitto_MQTT
-python run_simulation.py
-```
-
-### 6. React 프론트엔드 (터미널 5)
+### 4. React 프론트엔드 (터미널 5)
 ```bash
 cd dashboard_frontend
 npm run dev
@@ -134,8 +115,5 @@ npm run dev
 - 각 터미널에서 `Ctrl+C`
 - 가상환경 비활성화: `deactivate`
 
-## 15개 공정 스테이션
-**A라인**: A01_DOOR → A02_WIRING → A03_HEADLINER → A04_CRASH_PAD  
-**B라인**: B01_FUEL_TANK → B02_CHASSIS_MERGE → B03_MUFFLER  
-**C라인**: C01_FEM → C02_GLASS → C03_SEAT → C04_BUMPER → C05_TIRE  
-**D라인**: D01_WHEEL_ALIGNMENT → D02_HEADLAMP → D03_WATER_LEAK_TEST
+## 2개 공정 스테이션
+**라인**: DoorStation → WaterLeackTestStation 11 22 ㄱㄷ  ㅅㄷㄴㅅ
