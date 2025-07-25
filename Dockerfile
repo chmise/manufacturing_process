@@ -50,7 +50,7 @@ ENV TZ=Asia/Seoul
 
 EXPOSE 8080
 
-# 메모리 최적화된 JVM 설정 (t3.micro용)
+# 메모리 최적화된 JVM 설정 (t2.micro용)
 CMD ["java", \
      "-Xmx400m", \
      "-Xms200m", \
@@ -70,9 +70,6 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 # 빌드된 프론트엔드 복사
 COPY --from=frontend-build /app/dist /usr/share/nginx/html
-
-# nginx 포트 변경 (ALB 3000포트 맞춤)
-RUN sed -i 's/listen 80;/listen 3000;/' /etc/nginx/nginx.conf
 
 EXPOSE 80
 
