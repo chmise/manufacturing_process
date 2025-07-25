@@ -1,10 +1,52 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 const Layout = ({ children }) => {
   const location = useLocation()
+  const navigate = useNavigate()
+  const [user, setUser] = useState(null)
 
   const isActive = (path) => {
     return location.pathname === path ? 'active' : ''
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      fetchUserInfo(token)
+    } else {
+      navigate('/login')
+    }
+  }, [navigate])
+
+  const fetchUserInfo = async (token) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/user/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+      } else {
+        // 토큰이 유효하지 않으면 로그인 페이지로
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        navigate('/login')
+      }
+    } catch (error) {
+      console.error('Failed to fetch user info:', error)
+      navigate('/login')
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    navigate('/login')
   }
 
   return (
@@ -81,17 +123,14 @@ const Layout = ({ children }) => {
                   </svg>
                 </span>
                 <div className="d-none d-xl-block ps-2">
-                  <div>Paweł Kuna</div>
-                  <div className="mt-1 small text-secondary">UI Designer</div>
+                  <div>{user?.userName || 'Loading...'}</div>
+                  <div className="mt-1 small text-secondary">{user?.companyName || ''}</div>
                 </div>
               </a>
               <div className="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                <a href="#" className="dropdown-item">Status</a>
                 <a href="#" className="dropdown-item">Profile</a>
-                <a href="#" className="dropdown-item">Feedback</a>
                 <div className="dropdown-divider"></div>
-                <a href="#" className="dropdown-item">Settings</a>
-                <a href="#" className="dropdown-item">Logout</a>
+                <a href="#" className="dropdown-item" onClick={handleLogout}>Logout</a>
               </div>
             </div>
           </div>

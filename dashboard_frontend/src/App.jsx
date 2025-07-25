@@ -23,6 +23,9 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn')
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('userData')
     setIsLoggedIn(false)
   }
 
@@ -39,7 +42,7 @@ function App() {
         <Route
           path="/*"
           element={
-            <ProtectedRoute isAuthenticated={isLoggedIn}>
+            <ProtectedRoute>
               <Layout onLogout={handleLogout}>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
