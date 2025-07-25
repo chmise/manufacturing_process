@@ -1,5 +1,5 @@
 import Factory3DTwin from "./Twin/Factory3DTwin";
-import Navbar from "./Twin/Navabr";
+import Navbar from "./Twin/Navbar";
 
 const Factory3D = () => {
   return (
