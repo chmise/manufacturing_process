@@ -54,7 +54,7 @@ jobs:
           docker stop factory || true 
           docker rm factory || true 
           echo "--- Running New App Container ---"
-          docker run -d --restart always --name factory -p 8000:8000 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
+          docker run -d --restart always --name factory -p 80:80 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
           
           echo "--- Cleaning up unused Docker images ---"
           docker system prune -f
