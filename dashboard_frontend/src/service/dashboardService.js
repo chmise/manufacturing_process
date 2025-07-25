@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api/kpi';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 class DashboardService {
   constructor() {
@@ -42,9 +42,8 @@ class DashboardService {
       const dashboardData = await this.getFactorySummary();
       this.notify('dashboard', dashboardData);
       
-      const kpiResponse = await this.getLatestKPIs();
-      // 백엔드 응답에서 stations 배열 추출
-      const stationsData = kpiResponse.stations || [];
+      // stations 배열은 백엔드에서 제공하지 않음
+      const stationsData = [];
       this.notify('stations', stationsData);
       
     } catch (error) {
@@ -54,23 +53,16 @@ class DashboardService {
   }
 
   async getLatestKPIs() {
-    const response = await fetch(`${API_BASE_URL}/latest`);
+    const response = await fetch(`${API_BASE_URL}/kpi/realtime`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
   }
   
-  async getStationKPI(stationId) {
-    const response = await fetch(`${API_BASE_URL}/station/${stationId}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  }
   
   async getFactorySummary() {
-    const response = await fetch(`${API_BASE_URL}/factory/summary`);
+    const response = await fetch(`${API_BASE_URL}/dashboard`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
