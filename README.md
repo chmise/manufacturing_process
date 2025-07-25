@@ -116,4 +116,4 @@ npm run dev
 - 가상환경 비활성화: `deactivate`
 
 ## 2개 공정 스테이션
-**라인**: DoorStation → WaterLeackTestStation 
+**라인**: DoorStation → WaterLeackTestStation 11
