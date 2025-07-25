@@ -2,12 +2,6 @@ package com.u1mobis.dashboard_backend.entity;
 
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +19,6 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "kpi_data")
 @Data
-@Builder
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -74,6 +66,13 @@ public class KPIData {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = true)
     private Company company;
+
+    @Column(name = "line_id", nullable = false)
+    private Long lineId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "line_id", insertable = false, updatable = false)
+    private ProductionLine productionLine;
 
     // OEE 필드 추가 (PDF 스키마에 맞춤)
     @Column(name = "oee")

@@ -48,4 +48,11 @@ public class QualityRecord {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", insertable = false, updatable = false)
     private CurrentProduction currentProduction;
+    
+    @Column(name = "line_id", nullable = false)
+    private Long lineId;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "line_id", insertable = false, updatable = false)
+    private ProductionLine productionLine;
 }
