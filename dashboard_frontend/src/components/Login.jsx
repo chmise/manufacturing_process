@@ -19,6 +19,10 @@ const Login = ({ onLogin }) => {
       const loginResponse = await apiService.user.login({ username, password });
       
       if (loginResponse.success) {
+        // JWT 토큰 저장
+        localStorage.setItem('accessToken', loginResponse.accessToken);
+        localStorage.setItem('refreshToken', loginResponse.refreshToken);
+        
         // 사용자 정보를 localStorage에 저장
         const userData = {
           userName: loginResponse.userName,

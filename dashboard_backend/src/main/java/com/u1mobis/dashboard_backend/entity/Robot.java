@@ -25,10 +25,17 @@ public class Robot {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
+    @Column(name = "line_id", nullable = false)
+    private Long lineId;
+
     // 외래키 관계 (나중에 설정할 예정)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", insertable = false, updatable = false)
     private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "line_id", insertable = false, updatable = false)
+    private ProductionLine productionLine;
 
     // 비즈니스 로직용 생성자
     public Robot(Long companyId, String robotName) {

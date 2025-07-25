@@ -4,9 +4,12 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,5 +38,15 @@ public class EnvironmentSensor {
     
     @Column(name = "air_quality")
     private Integer airQuality;                // 공기질 지수
+    
+    @Column(name = "line_id", nullable = true) // NULL = 공장 전체, 값 있음 = 특정 라인
+    private Long lineId;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "line_id", insertable = false, updatable = false)
+    private ProductionLine productionLine;
+    
+    @Column(name = "sensor_location")
+    private String sensorLocation;             // 센서 위치 설명
 }
 

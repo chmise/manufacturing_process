@@ -10,6 +10,7 @@ const Register = () => {
     confirmPassword: '',
     email: '',
     birth: '',
+    companyName: '',
   });
 
   const [error, setError] = useState('');
@@ -19,15 +20,46 @@ const Register = () => {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.');
       return;
     }
     setError('');
-    // 회원가입 처리 로직(예: 서버 API 호출) 추가 예정
-    alert('회원가입이 완료되었습니다!');
+
+    try {
+      const response = await fetch('http://localhost:8080/api/user/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: form.username,
+          password: form.password,
+          companyName: form.companyName,
+          email: form.email,
+          birth: form.birth,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 토큰 저장 (자동 로그인)
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        
+        alert('회원가입이 완료되었습니다!');
+        // 대시보드로 이동
+        window.location.href = '/dashboard';
+      } else {
+        setError(data.message || '회원가입에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setError('서버와의 통신에 실패했습니다.');
+    }
   };
 
   return (
@@ -133,6 +165,20 @@ const Register = () => {
                 type="date"
                 value={form.birth}
                 onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>회사명</label>
+            <div className="input-wrapper">
+              <span className="input-icon">🏢</span>
+              <input
+                name="companyName"
+                value={form.companyName}
+                onChange={handleChange}
+                placeholder="회사명을 입력하세요"
                 required
               />
             </div>
