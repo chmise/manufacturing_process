@@ -1,23 +1,51 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import apiService from "../service/apiService";
 import "../styles/Login.css";
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    // 간단한 로그인 검증 (실제로는 서버에서 처리)
-    if (username === "admin" && password === "password") {
-      setError("");
-      onLogin();
-      navigate("/dashboard");
-    } else {
-      setError("잘못된 사용자명 또는 비밀번호입니다.");
+    try {
+      const loginResponse = await apiService.user.login({ username, password });
+      
+      if (loginResponse.success) {
+        // 사용자 정보를 localStorage에 저장
+        const userData = {
+          userName: loginResponse.userName,
+          companyName: loginResponse.companyName,
+          userId: loginResponse.userId,
+          companyId: loginResponse.companyId
+        };
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Unity에 회사명 전달
+        if (window.SetCompanyName && loginResponse.companyName) {
+          setTimeout(() => {
+            window.SetCompanyName(loginResponse.companyName);
+          }, 1000); // Unity 로딩을 기다림
+        }
+        
+        onLogin(userData);
+        navigate("/dashboard");
+      } else {
+        setError("잘못된 사용자명 또는 비밀번호입니다.");
+      }
+    } catch (err) {
+      console.error('로그인 오류:', err);
+      setError("서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,8 +84,8 @@ const Login = ({ onLogin }) => {
 
           {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" className="login-button">
-            로그인
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
 

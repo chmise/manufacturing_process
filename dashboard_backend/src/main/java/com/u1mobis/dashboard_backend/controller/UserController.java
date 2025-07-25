@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.u1mobis.dashboard_backend.dto.UserDTO;
+import com.u1mobis.dashboard_backend.dto.LoginResponseDTO;
 import com.u1mobis.dashboard_backend.service.UserService;
 
 @RestController
@@ -22,7 +23,7 @@ public class UserController {
         return userService.register(userDTO);
     }
     @PostMapping("/login")
-    public boolean login(@RequestBody UserDTO userDTO) {
+    public LoginResponseDTO login(@RequestBody UserDTO userDTO) {
         return userService.login(userDTO);
     }
     // 추가적인 사용자 관련 API를 여기에 정의할 수 있습니다.    

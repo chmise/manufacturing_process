@@ -100,6 +100,42 @@ export const apiService = {
     return response.json();
   },
 
+  // 사용자 인증 API
+  user: {
+    // 로그인
+    login: async (credentials) => {
+      const response = await fetch(`${API_BASE_URL}/user/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+
+    // 회원가입
+    register: async (userData) => {
+      const response = await fetch(`${API_BASE_URL}/user/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
+  },
+
   // 클릭 이벤트 처리 함수들
   clickEvent: {
     // 통합 클릭 이벤트 처리

@@ -26,6 +26,24 @@ const Factory3DTwin = () => {
   useEffect(() => {
     // Unity 통신 설정
     setupTestFunctions();
+    
+    // 로그인된 사용자의 회사명 자동 설정
+    const setCompanyNameFromUserData = () => {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.companyName && window.SetCompanyName) {
+            setTimeout(() => {
+              window.SetCompanyName(user.companyName);
+              console.log(`자동으로 회사명 설정: ${user.companyName}`);
+            }, 2000); // Unity 로딩 완료 후 설정
+          }
+        } catch (error) {
+          console.error('사용자 데이터 파싱 오류:', error);
+        }
+      }
+    };
 
     // 전역 Unity 인스턴스가 이미 있는지 확인
     if (window.unityGlobalState.instance) {
@@ -72,6 +90,9 @@ const Factory3DTwin = () => {
           }
         }, 100);
       }
+      
+      // 기존 Unity 인스턴스에서도 회사명 설정
+      setCompanyNameFromUserData();
       return;
     }
 
@@ -161,6 +182,9 @@ const Factory3DTwin = () => {
               isLoadingRef.current = false;
               
               setupUnityReactCommunication(unityInstance);
+              
+              // Unity 로딩 완료 후 회사명 자동 설정
+              setCompanyNameFromUserData();
             }).catch((error) => {
               console.error('❌ Unity 로드 실패:', error);
               setErrorMessage(`Unity 로드 실패: ${error.message || error.toString()}`);
@@ -411,6 +435,18 @@ const Factory3DTwin = () => {
         handleDigitalTwinClick('product', data, data.position);
       } catch (error) {
         console.error('제품 클릭 데이터 파싱 오류:', error);
+      }
+    };
+
+    // 회사명 설정 함수 추가
+    window.SetCompanyName = (companyName) => {
+      try {
+        if (unityInstance && unityInstance.SendMessage) {
+          unityInstance.SendMessage('CompanyManager', 'SetCompanyName', companyName);
+          console.log(`Unity에 회사명 전송: ${companyName}`);
+        }
+      } catch (error) {
+        console.error('회사명 설정 실패:', error);
       }
     };
 
