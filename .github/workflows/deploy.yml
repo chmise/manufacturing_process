@@ -1,6 +1,7 @@
 name: Deploy Node.js MVC App to EC2
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main 
