@@ -1,208 +1,58 @@
-name: Deploy Factory App to EC2 via Docker Hub
+name: Deploy Node.js MVC App to EC2
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main 
 
 env:
   DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
   
-  FRONTEND_IMAGE_NAME: chmise/factory-frontend
-  BACKEND_IMAGE_NAME: chmise/factory-backend
-  
-  # AWS 정보
-  AWS_REGION: ap-northeast-2
-  EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
-  EC2_USERNAME: ec2-user
-  EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-  
-  # Private 인스턴스 정보
-  MASTER_HOST: 10.0.2.224
-  SLAVE_HOST: 10.0.12.124
+  APP_DOCKER_IMAGE_NAME: impelfin/restful_app 
+
+  AWS_REGION: ap-northeast-2 
+  EC2_HOST: ${{ secrets.HOST }} 
+  EC2_USERNAME: ${{ secrets.USERNAME }}
+  EC2_KEY: ${{ secrets.KEY }} 
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    # 타임아웃 연장 및 메모리 최적화
-    timeout-minutes: 45
-    
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-      
-    - name: Free up disk space
-      run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /opt/ghc
-        sudo rm -rf /usr/local/share/boost
-        sudo rm -rf /usr/local/graalvm/
-        sudo rm -rf /usr/local/.ghcup/
-        sudo rm -rf /usr/local/share/powershell
-        sudo rm -rf /usr/local/share/chromium
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /usr/local/lib/node_modules
-        df -h
-        
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ env.DOCKER_HUB_USERNAME }}
         password: ${{ env.DOCKER_HUB_TOKEN }}
-        
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver-opts: |
-          image=moby/buildkit:v0.12.0
-        config-inline: |
-          [worker.oci]
-            max-parallelism = 2
-          [worker.containerd]
-            max-parallelism = 2
-            
-    # Backend와 Frontend 순차 빌드 (메모리 절약)
-    - name: Build and Push Backend Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        target: backend
-        push: true
-        no-cache: true  # 캐시 문제 방지
-        platforms: linux/amd64
-        tags: |
-          ${{ env.BACKEND_IMAGE_NAME }}:latest
-          ${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-          
-    - name: Clean up after backend build
-      run: |
-        docker system prune -f
-        docker builder prune -f
-        
-    - name: Build and Push Frontend Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        target: frontend
-        push: true
-        no-cache: true
-        platforms: linux/amd64
-        tags: |
-          ${{ env.FRONTEND_IMAGE_NAME }}:latest
-          ${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-        
-    - name: Get Bastion Host IP and Deploy
-      run: |
-        # AWS CLI로 Bastion Host의 현재 Public IP 가져오기
-        BASTION_IP=$(aws ec2 describe-instances \
-          --instance-ids ${{ env.EC2_INSTANCE_ID }} \
-          --region ${{ env.AWS_REGION }} \
-          --query 'Reservations[0].Instances[0].PublicIpAddress' \
-          --output text)
-        
-        echo "Current Bastion Host IP: $BASTION_IP"
-        
-        # SSH로 배포 실행
-        echo "${{ env.EC2_KEY }}" > private_key.pem
-        chmod 600 private_key.pem
-        
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USERNAME }}@$BASTION_IP << 'BASTION_COMMANDS'
-          echo "=== Connecting to Master Instance ==="
-          ssh -i "factory-pem-key.pem" -o StrictHostKeyChecking=no ec2-user@${{ env.MASTER_HOST }} << 'MASTER_COMMANDS'
-            
-            echo "--- Creating deployment directory ---"
-            mkdir -p /home/ec2-user/factory-app
-            cd /home/ec2-user/factory-app
-            
-            echo "--- Creating docker-compose.yml ---"
-            cat > docker-compose.yml << 'COMPOSE_EOF'
-          version: '3.8'
+        context: ./nodejs/restful
+        file: ./nodejs/restful/Dockerfile 
+        push: true
+        tags: ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USERNAME }}
+        key: ${{ env.EC2_KEY }}
+        port: ${{ secrets.PORT }}
+        script: |
+          echo "--- Pulling Latest App Image ---"
+          docker pull ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
+          echo "--- Stopping and Removing Old App Container ---"
+          docker stop restful_app || true 
+          docker rm restful_app || true 
+          echo "--- Running New App Container ---"
+          docker run -d --restart always --name restful_app -p 8000:8000 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
           
-          services:
-            backend:
-              image: ${{ env.BACKEND_IMAGE_NAME }}:latest
-              container_name: factory-backend
-              ports:
-                - "8080:8080"
-              environment:
-                - SPRING_PROFILES_ACTIVE=production
-              deploy:
-                resources:
-                  limits:
-                    memory: 450M
-                    cpus: '0.8'
-                  reservations:
-                    memory: 200M
-                    cpus: '0.2'
-              networks:
-                - factory-network
-              restart: unless-stopped
-              
-            frontend:
-              image: ${{ env.FRONTEND_IMAGE_NAME }}:latest
-              container_name: factory-frontend
-              ports:
-                - "3000:3000"
-              deploy:
-                resources:
-                  limits:
-                    memory: 100M
-                    cpus: '0.2'
-                  reservations:
-                    memory: 50M
-                    cpus: '0.1'
-              depends_on:
-                - backend
-              networks:
-                - factory-network
-              restart: unless-stopped
-              
-          networks:
-            factory-network:
-              driver: bridge
-          COMPOSE_EOF
-            
-            echo "--- Pulling latest images ---"
-            docker-compose pull
-            
-            echo "--- Stopping existing containers ---"
-            docker-compose down || true
-            
-            echo "--- Starting new containers ---"
-            docker-compose up -d
-            
-            echo "--- Cleaning up unused images ---"
-            docker system prune -f
-            
-            echo "--- Checking container status ---"
-            docker-compose ps
-            
-            echo "--- Testing services ---"
-            sleep 30
-            curl -f http://localhost:3000 > /dev/null && echo "✅ Frontend OK" || echo "❌ Frontend Failed"
-            curl -f http://localhost:8080 > /dev/null && echo "✅ Backend OK" || echo "❌ Backend Failed"
-            
-          MASTER_COMMANDS
-        BASTION_COMMANDS
-        
-        # 키 파일 삭제
-        rm private_key.pem
+          echo "--- Cleaning up unused Docker images ---"
+          docker system prune -f
