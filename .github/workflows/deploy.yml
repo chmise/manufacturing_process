@@ -49,8 +49,8 @@ jobs:
           echo "--- Pulling Latest App Image ---"
           docker pull ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
           echo "--- Stopping and Removing Old App Container ---"
-          docker stop restful_app || true 
-          docker rm restful_app || true 
+          docker stop factory || true 
+          docker rm factory || true 
           echo "--- Running New App Container ---"
           docker run -d --restart always --name factory -p 8000:8000 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
           
