@@ -6,7 +6,7 @@ import ProductionTarget from './KPI/ProductionTarget';
 import HourlyProduction from './KPI/HourlyProduction';
 import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
-import InventoryStatus from './Inventory/InventoryTables';
+import InventoryStatus from './Inventory/InventoryTable';
 import apiService from '../service/apiService';
 
 const Dashboard = () => {
