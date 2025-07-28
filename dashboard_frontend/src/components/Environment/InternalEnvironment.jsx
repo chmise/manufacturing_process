@@ -2,8 +2,8 @@ import React from 'react';
 
 const InternalEnvironment = () => {
   return (
-    <div className="card h-100">
-      <div className="card-body d-flex flex-column justify-content-center h-100">
+    <div className="card" style={{ height: '215px' }}>
+      <div className="card-body d-flex flex-column justify-content-center" style={{ height: '215px' }}>
           <h3 className="card-title">내부 환경</h3>
           
           <div className="row mt-3">
