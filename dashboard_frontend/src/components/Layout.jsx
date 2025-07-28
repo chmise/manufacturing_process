@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { apiService } from '../service/apiService'
 
 const Layout = ({ children }) => {
   const location = useLocation()
@@ -21,32 +22,17 @@ const Layout = ({ children }) => {
 
   const fetchUserInfo = async (token) => {
     try {
-      const response = await fetch('http://localhost:8080/api/user/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      } else {
-        // 토큰이 유효하지 않으면 로그인 페이지로
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        navigate('/login')
-      }
+      const userData = await apiService.auth.getCurrentUser()
+      setUser(userData)
     } catch (error) {
       console.error('Failed to fetch user info:', error)
+      // apiService에서 이미 토큰 정리와 리다이렉트를 처리함
       navigate('/login')
     }
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    navigate('/login')
+    apiService.auth.logout()
   }
 
   return (
