@@ -17,6 +17,12 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     // 회사 존재 여부 확인
     boolean existsByCompanyName(String companyName);
 
+    // 회사 코드로 조회
+    Optional<Company> findByCompanyCode(String companyCode);
+
+    // 회사 코드 존재 여부 확인
+    boolean existsByCompanyCode(String companyCode);
+
     // 회사 ID와 이름으로 조회
     @Query("SELECT c FROM Company c WHERE c.companyId = :companyId AND c.companyName = :companyName")
     Optional<Company> findByCompanyIdAndCompanyName(@Param("companyId") Long companyId, 

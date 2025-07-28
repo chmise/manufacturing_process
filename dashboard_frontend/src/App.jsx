@@ -7,7 +7,8 @@ import Inventory from './components/Inventory'
 import ApiTest from './components/ApiTest'
 
 import Login from './components/Login'
-import Register from './components/Register'  // Register 컴포넌트 import 추가
+import Register from './components/Register'
+import CompanyRegister from './components/CompanyRegister'
 import ProtectedRoute from './components/ProtectedRoute'
 
 
@@ -37,10 +38,11 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        <Route path="/register" element={<Register />} /> {/* 회원가입 경로 추가 */}
+        <Route path="/register" element={<Register />} />
+        <Route path="/company-register" element={<CompanyRegister />} />
 
         <Route
-          path="/*"
+          path="/:company/*"
           element={
             <ProtectedRoute>
               <Layout onLogout={handleLogout}>
