@@ -7,7 +7,9 @@ import HourlyProduction from './KPI/HourlyProduction';
 import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
 import InventoryStatus from './Inventory/InventoryTable';
+import AlertToast from './Alert/AlertToast';
 import apiService from '../service/apiService';
+import useWebSocket from '../hooks/useWebSocket';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -15,6 +17,72 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [connectionStatus, setConnectionStatus] = useState('connecting');
+
+  // 사용자 정보 가져오기 (localStorage에서)
+  const [userInfo, setUserInfo] = useState(null);
+  const [companyInfo, setCompanyInfo] = useState(null);
+
+  // 현재 로그인된 사용자 정보 로드
+  useEffect(() => {
+    const loadCompanyInfo = async () => {
+      try {
+        // 실제 회사 목록 가져오기
+        const companies = await apiService.company.getAllCompanies();
+        
+        if (companies && companies.length > 0) {
+          // 첫 번째 회사를 기본으로 사용
+          const firstCompany = companies[0];
+          const defaultUser = { userId: 'testuser', userName: '테스트사용자' };
+          
+          setCompanyInfo({
+            companyId: firstCompany.companyId,
+            companyName: firstCompany.companyName,
+            companyCode: firstCompany.companyCode
+          });
+          setUserInfo(defaultUser);
+          
+          // API 호출을 위한 회사 정보를 localStorage에 설정
+          localStorage.setItem('userData', JSON.stringify({
+            companyName: firstCompany.companyCode,
+            companyCode: firstCompany.companyCode
+          }));
+        } else {
+          // 회사가 없는 경우 기본값 사용
+          const defaultCompany = { companyCode: 'DEFAULT', companyName: '테스트회사' };
+          const defaultUser = { userId: 'testuser', userName: '테스트사용자' };
+          
+          setCompanyInfo(defaultCompany);
+          setUserInfo(defaultUser);
+          
+          localStorage.setItem('userData', JSON.stringify({
+            companyName: defaultCompany.companyCode,
+            companyCode: defaultCompany.companyCode
+          }));
+        }
+      } catch (error) {
+        console.error('회사 정보 로드 실패:', error);
+        // 에러 시 기본값 사용
+        const defaultCompany = { companyCode: 'DEFAULT', companyName: '테스트회사' };
+        const defaultUser = { userId: 'testuser', userName: '테스트사용자' };
+        
+        setCompanyInfo(defaultCompany);
+        setUserInfo(defaultUser);
+        
+        localStorage.setItem('userData', JSON.stringify({
+          companyName: defaultCompany.companyCode,
+          companyCode: defaultCompany.companyCode
+        }));
+      }
+    };
+
+    loadCompanyInfo();
+  }, []);
+
+  // WebSocket 연결 및 알림 관리
+  const { alerts, removeAlert } = useWebSocket(
+    companyInfo?.companyName || '테스트회사', 
+    userInfo?.userId || 'anonymous'
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -29,10 +97,10 @@ const Dashboard = () => {
         
         // 병렬로 모든 데이터 가져오기
         const [dashboardData, kpiData, environmentData, conveyorData] = await Promise.all([
-          apiService.getDashboardData(),
-          apiService.getRealTimeKPI(),
-          apiService.getCurrentEnvironment(),
-          apiService.getConveyorStatus()
+          apiService.dashboard.getData(),
+          apiService.dashboard.getRealTimeKPI(),
+          apiService.environment.getCurrent(),
+          apiService.production.getConveyorStatus()
         ]);
 
         if (mounted) {
@@ -257,6 +325,9 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 알림 토스트 */}
+      <AlertToast alerts={alerts} onRemove={removeAlert} />
     </div>
   );
 };
