@@ -40,6 +40,10 @@ public class SecurityConfig {
                 // 인증 없이 접근 가능한 경로들
                 .requestMatchers("/api/user/login", "/api/user/register").permitAll()
                 .requestMatchers("/api/user/refresh-token").permitAll()
+                // 테스트용 API 엔드포인트 허용
+                .requestMatchers("/api/dashboard", "/api/production/status", "/api/kpi/realtime").permitAll()
+                .requestMatchers("/api/environment/**", "/api/stock", "/api/stocks/**").permitAll()
+                .requestMatchers("/api/click/**", "/api/iot/**", "/api/conveyor/**").permitAll()
                 // 정적 리소스 허용 (필요시)
                 .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
                 // 그 외 모든 요청은 인증 필요

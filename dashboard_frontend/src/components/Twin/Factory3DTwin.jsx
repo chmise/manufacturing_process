@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import DigitalTwinOverlay from './DigitalTwinOverlay';
+import HoverTooltip from './HoverTooltip';
 
 // 전역 Unity 상태 관리 (간단 버전)
 window.unityGlobalState = window.unityGlobalState || {
@@ -22,6 +23,12 @@ const Factory3DTwin = () => {
   const [overlayData, setOverlayData] = useState(null);
   const [overlayType, setOverlayType] = useState(null);
   const [overlayPosition, setOverlayPosition] = useState({ x: 0, y: 0 });
+  
+  // 호버 툴팁 상태 (Unity에서 직접 제어)
+  const [hoverVisible, setHoverVisible] = useState(false);
+  const [hoverData, setHoverData] = useState(null);
+  const [hoverType, setHoverType] = useState(null);
+  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     // Unity 통신 설정
@@ -400,6 +407,8 @@ const Factory3DTwin = () => {
       }
     };
 
+    // Unity에서 호버 데이터를 직접 받으므로 별도 이벤트 리스너 불필요
+
     // Unity에서 React로 데이터 수신 (글로벌 함수)
     window.ReceiveFromUnity = (data) => {
       try {
@@ -407,6 +416,26 @@ const Factory3DTwin = () => {
         handleUnityData(parsedData);
       } catch (error) {
         console.error('Unity 데이터 파싱 오류:', error);
+      }
+    };
+
+    // Unity에서 호버 데이터 수신
+    window.ReceiveHoverFromUnity = (hoverData) => {
+      console.log('🎯 React에서 Unity 호버 데이터 수신:', hoverData);
+      
+      try {
+        const data = typeof hoverData === 'string' ? JSON.parse(hoverData) : hoverData;
+        console.log('📊 파싱된 데이터:', data);
+        
+        if (data.type === 'objectHovered') {
+          console.log('✨ handleUnityHover 호출');
+          handleUnityHover(data.payload);
+        } else if (data.type === 'hoverExit') {
+          console.log('🔚 handleUnityHoverExit 호출');
+          handleUnityHoverExit();
+        }
+      } catch (error) {
+        console.error('Unity 호버 데이터 파싱 오류:', error);
       }
     };
 
@@ -548,11 +577,108 @@ const Factory3DTwin = () => {
     setOverlayOpen(false);
     setOverlayData(null);
     setOverlayType(null);
+    // 오버레이가 닫히면 호버 툴팁도 숨김
+    setHoverVisible(false);
+  };
+
+  // Unity에서 직접 호버 데이터를 전송하므로 React 측 감지 로직 불필요
+
+  // Unity에서 온 호버 데이터 처리 (정확한 좌표 사용)
+  const handleUnityHover = (payload) => {
+    console.log('🎯 Unity 호버 데이터 수신:', payload);
+    
+    if (overlayOpen) {
+      console.log('⚠️ 오버레이가 열려있어서 호버 무시');
+      return;
+    }
+    
+    const { objectId, objectType, position } = payload;
+    
+    // Unity에서 받은 정확한 좌표 사용
+    if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
+      console.warn('⚠️ Unity에서 받은 좌표가 올바르지 않음:', position);
+      return;
+    }
+    
+    console.log('📍 Unity 정확한 좌표:', position);
+    
+    // objectId를 기반으로 호버 데이터 생성
+    let hoverData = {};
+    
+    switch (objectType) {
+      case 'robot':
+        const robotId = extractRobotId(objectId);
+        hoverData = { robotId, status: '운영 중' };
+        break;
+      case 'station':
+        const stationCode = extractStationCode(objectId);
+        hoverData = { stationCode, status: '가동 중' };
+        break;
+      case 'product':
+        const productId = convertCarIdToProductId(objectId);
+        hoverData = { productId, currentStation: 'A01' };
+        break;
+      default:
+        hoverData = { objectId, objectType };
+    }
+    
+    // 간단한 좌표 보정: Unity 캔버스 영역 찾기
+    const unityContainer = document.querySelector('[data-unity-canvas], canvas, #unity-canvas');
+    let adjustedPosition = { x: position.x, y: position.y };
+    
+    if (unityContainer) {
+      const rect = unityContainer.getBoundingClientRect();
+      console.log('🎯 Unity 컨테이너 정보:', {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+      });
+      
+      // 정규화된 Unity 좌표(0~1)를 실제 픽셀 좌표로 변환
+      adjustedPosition = {
+        x: rect.left + (position.x * rect.width),
+        y: rect.top + (position.y * rect.height)
+      };
+      
+      console.log('📍 정규화 좌표 변환:', {
+        unity정규화: position,
+        캔버스크기: { width: rect.width, height: rect.height },
+        픽셀좌표: { 
+          x: position.x * rect.width, 
+          y: position.y * rect.height 
+        },
+        최종좌표: adjustedPosition
+      });
+    } else {
+      console.warn('⚠️ Unity 컨테이너를 찾을 수 없음 - 대시보드 기준으로 계산');
+      // 대시보드가 왼쪽에 있다고 가정하고 오프셋 추가
+      adjustedPosition = {
+        x: position.x + 450, // 대시보드 너비만큼 오프셋
+        y: position.y + 50   // 상단 여백
+      };
+    }
+    
+    setHoverType(objectType);
+    setHoverData(hoverData);
+    setHoverPosition(adjustedPosition);
+    setHoverVisible(true);
+    
+    console.log('✅ 툴팁 최종 위치:', adjustedPosition);
+  };
+
+  // Unity 호버 종료 처리
+  const handleUnityHoverExit = () => {
+    console.log('🔚 Unity 호버 종료 신호 수신');
+    setHoverVisible(false);
+    setHoverData(null);
+    setHoverType(null);
+    setHoverPosition({ x: 0, y: 0 });
   };
 
   // Unity 통신 설정 초기화
   const setupTestFunctions = () => {
-    // Unity-React 통신 함수 등록
+    // Unity-React 통신 함수 등록 완료
   };
 
   const handleRetry = () => {
@@ -791,6 +917,14 @@ const Factory3DTwin = () => {
         clickType={overlayType}
         clickData={overlayData}
         position={overlayPosition}
+      />
+
+      {/* 호버 툴팁 */}
+      <HoverTooltip
+        isVisible={hoverVisible}
+        position={hoverPosition}
+        data={hoverData}
+        type={hoverType}
       />
       
     </div>
