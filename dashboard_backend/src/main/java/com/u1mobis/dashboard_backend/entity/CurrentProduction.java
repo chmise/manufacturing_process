@@ -24,6 +24,9 @@ public class CurrentProduction {
     @Id
     @Column(name = "product_id")
     private String productId;                  // 차량 고유 ID (Primary Key)
+
+    @Column(name = "product_color")
+    private String productColor;                  // 차량 색깔
     
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;           // 생산 시작 시각
