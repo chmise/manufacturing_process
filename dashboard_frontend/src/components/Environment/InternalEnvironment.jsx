@@ -2,15 +2,15 @@ import React from 'react';
 
 const InternalEnvironment = () => {
   return (
-    <div className="card" style={{ height: '215px' }}>
-      <div className="card-body d-flex flex-column justify-content-center" style={{ height: '215px' }}>
+    <div className="card" style={{ height: '180px' }}>
+      <div className="card-body d-flex flex-column justify-content-center" style={{ height: '180px' }}>
           <h3 className="card-title">내부 환경</h3>
           
           <div className="row mt-3">
             {/* 온도 */}
             <div className="col-4">
-              <div className="d-flex align-items-center">
-                <div className="me-3" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="d-flex flex-column align-items-center text-center">
+                <div className="mb-2" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#tempGradientInternal)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <defs>
                       <linearGradient id="tempGradientInternal" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -25,32 +25,32 @@ const InternalEnvironment = () => {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-muted">온도</div>
-                  <div className="fw-bold h4 mb-0">23°C</div>
+                  <div className="text-muted small">온도</div>
+                  <div className="fw-bold h5 mb-0">23°C</div>
                 </div>
               </div>
             </div>
             
             {/* 습도 */}
             <div className="col-4">
-              <div className="d-flex align-items-center">
-                <div className="me-3" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="d-flex flex-column align-items-center text-center">
+                <div className="mb-2" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="#3fa9f5" className="icon icon-tabler icons-tabler-filled icon-tabler-droplet">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                     <path d="M10.708 2.372a2.382 2.382 0 0 0 -.71 .686l-4.892 7.26c-1.981 3.314 -1.22 7.466 1.767 9.882c2.969 2.402 7.286 2.402 10.254 0c2.987 -2.416 3.748 -6.569 1.795 -9.836l-4.919 -7.306c-.722 -1.075 -2.192 -1.376 -3.295 -.686z" />
                   </svg>
                 </div>
                 <div>
-                  <div className="text-muted">습도</div>
-                  <div className="fw-bold h4 mb-0">45%</div>
+                  <div className="text-muted small">습도</div>
+                  <div className="fw-bold h5 mb-0">45%</div>
                 </div>
               </div>
             </div>
             
             {/* 공기질 */}
             <div className="col-4">
-              <div className="d-flex align-items-center">
-                <div className="me-3" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="d-flex flex-column align-items-center text-center">
+                <div className="mb-2" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                     <path d="M4 12a8 8 0 1 1 16 0" />
@@ -59,8 +59,8 @@ const InternalEnvironment = () => {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-muted">공기질</div>
-                  <div className="fw-bold h4 mb-0 text-success">좋음</div>
+                  <div className="text-muted small">공기질</div>
+                  <div className="fw-bold text-success" style={{ fontSize: '0.8rem', lineHeight: '1.2' }}>좋음</div>
                 </div>
               </div>
             </div>
