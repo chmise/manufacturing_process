@@ -1,5 +1,40 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
+// 회사별 동적 URL 생성 함수
+const getCompanyApiUrl = (endpoint, companyName = null) => {
+  // 로그인/회원가입은 회사별 분리 안함
+  if (endpoint.startsWith('/user/login') || endpoint.startsWith('/user/register') || endpoint.startsWith('/user/refresh-token') || endpoint.startsWith('/company/')) {
+    return `${API_BASE_URL}${endpoint}`;
+  }
+  
+  // URL에서 회사명 추출 또는 localStorage에서 가져오기
+  const company = companyName || getCurrentCompanyFromUrl() || getCurrentCompanyFromStorage();
+  
+  if (company) {
+    return `${API_BASE_URL}/${company}${endpoint}`;
+  }
+  
+  return `${API_BASE_URL}${endpoint}`;
+};
+
+// URL에서 현재 회사명 추출
+const getCurrentCompanyFromUrl = () => {
+  const path = window.location.pathname;
+  const segments = path.split('/').filter(Boolean);
+  // /{company}/dashboard 형태에서 company 추출
+  return segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'register' && segments[0] !== 'company-register' ? segments[0] : null;
+};
+
+// localStorage에서 회사명 가져오기
+const getCurrentCompanyFromStorage = () => {
+  try {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    return userData.companyName || null;
+  } catch {
+    return null;
+  }
+};
+
 // 토큰 관리 유틸리티
 const tokenManager = {
   getAccessToken: () => localStorage.getItem('accessToken'),
@@ -114,7 +149,8 @@ class AuthenticatedHttpClient {
   // 인증된 GET 요청
   async get(endpoint) {
     const headers = await this.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = getCompanyApiUrl(endpoint);
+    const response = await fetch(url, {
       method: 'GET',
       headers
     });
@@ -133,7 +169,8 @@ class AuthenticatedHttpClient {
   // 인증된 POST 요청
   async post(endpoint, data) {
     const headers = await this.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = getCompanyApiUrl(endpoint);
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(data)
@@ -152,7 +189,8 @@ class AuthenticatedHttpClient {
   // 인증된 PUT 요청
   async put(endpoint, data) {
     const headers = await this.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = getCompanyApiUrl(endpoint);
+    const response = await fetch(url, {
       method: 'PUT',
       headers,
       body: JSON.stringify(data)
@@ -171,7 +209,8 @@ class AuthenticatedHttpClient {
   // 인증된 DELETE 요청
   async delete(endpoint) {
     const headers = await this.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = getCompanyApiUrl(endpoint);
+    const response = await fetch(url, {
       method: 'DELETE',
       headers
     });
@@ -218,6 +257,35 @@ const publicAPI = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(userData)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // 회사 등록 (토큰 없이)
+  companyRegister: async (companyData) => {
+    const response = await fetch(`${API_BASE_URL}/company/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(companyData)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // 회사명 중복 체크 (토큰 없이)
+  checkCompanyName: async (companyName) => {
+    const response = await fetch(`${API_BASE_URL}/company/check-name/${encodeURIComponent(companyName)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -285,6 +353,14 @@ export const apiService = {
     getCurrentUser: () => httpClient.get('/user/me'),
     refreshToken: (refreshTokenRequest) => 
       httpClient.post('/user/refresh-token', refreshTokenRequest)
+  },
+
+  // 회사 관련 API
+  company: {
+    register: publicAPI.companyRegister,
+    checkCompanyName: publicAPI.checkCompanyName,
+    getCompanyByCode: (companyCode) => httpClient.get(`/company/code/${companyCode}`),
+    getCompanyInfo: (companyId) => httpClient.get(`/company/${companyId}`)
   }
 };
 

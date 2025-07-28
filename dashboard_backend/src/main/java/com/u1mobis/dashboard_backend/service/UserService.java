@@ -38,17 +38,22 @@ public class UserService {
                 return new JwtResponse(false, "이미 존재하는 사용자명입니다.");
             }
             
-            // 회사 찾기 또는 생성
-            Company company = companyRepository.findByCompanyName(userDTO.getCompanyName())
-                .orElseGet(() -> {
-                    Company newCompany = new Company();
-                    newCompany.setCompanyName(userDTO.getCompanyName());
-                    return companyRepository.save(newCompany);
-                });
+            // 회사코드로 회사 찾기
+            Company company = null;
+            if (userDTO.getCompanyCode() != null && !userDTO.getCompanyCode().trim().isEmpty()) {
+                company = companyRepository.findByCompanyCode(userDTO.getCompanyCode().toUpperCase())
+                    .orElse(null);
+                
+                if (company == null) {
+                    return new JwtResponse(false, "유효하지 않은 회사코드입니다.");
+                }
+            } else {
+                return new JwtResponse(false, "회사코드가 필요합니다.");
+            }
             
             // 새 사용자 생성
             User user = new User(company, userDTO.getUsername(), passwordEncoder.encode(userDTO.getPassword()), 
-                               userDTO.getEmail(), userDTO.getBirth());
+                               userDTO.getEmail(), userDTO.getBirth(), userDTO.getEmployeeCode(), userDTO.getName());
             User savedUser = userRepository.save(user);
             
             // JWT 토큰 생성
