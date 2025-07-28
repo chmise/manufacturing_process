@@ -7,8 +7,20 @@ const Layout = ({ children }) => {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
 
+  // 회사명을 포함한 URL 생성
+  const getCompanyUrl = (path) => {
+    if (!user?.companyName) return path
+    return `/${user.companyName}${path}`
+  }
+
+  // 멀티테넌트 경로 체크
   const isActive = (path) => {
-    return location.pathname === path ? 'active' : ''
+    const currentPath = location.pathname
+    const companyPath = user?.companyName ? `/${user.companyName}${path}` : path
+    
+    // 현재 경로가 회사별 경로와 일치하는지 확인
+    return currentPath === companyPath || 
+           (path === '/dashboard' && (currentPath === '/' || currentPath.endsWith('/dashboard'))) ? 'active' : ''
   }
 
   useEffect(() => {
@@ -51,13 +63,13 @@ const Layout = ({ children }) => {
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          <Link to="/" aria-label="U1MOBIS" className="navbar-brand navbar-brand-autodark me-3">
+          <Link to={getCompanyUrl('/dashboard')} aria-label="U1MOBIS" className="navbar-brand navbar-brand-autodark me-3">
             <img src="/LOGO.png" alt="로고" style={{ height: '32px' }} />
           </Link>
           <div className="collapse navbar-collapse" id="navbar-menu">
             <ul className="navbar-nav">
-              <li className={`nav-item ${isActive('/') || isActive('/dashboard')}`}>
-                <Link className="nav-link" to="/dashboard">
+              <li className={`nav-item ${isActive('/dashboard')}`}>
+                <Link className="nav-link" to={getCompanyUrl('/dashboard')}>
                   <span className="nav-link-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-layout-dashboard">
                       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -71,7 +83,7 @@ const Layout = ({ children }) => {
                 </Link>
               </li>
               <li className={`nav-item ${isActive('/factory3d')}`}>
-                <Link className="nav-link" to="/factory3d">
+                <Link className="nav-link" to={getCompanyUrl('/factory3d')}>
                   <span className="nav-link-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -84,7 +96,7 @@ const Layout = ({ children }) => {
                 </Link>
               </li>
               <li className={`nav-item ${isActive('/inventory')}`}>
-                <Link className="nav-link" to="/inventory">
+                <Link className="nav-link" to={getCompanyUrl('/inventory')}>
                   <span className="nav-link-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-1">
                       <path d="M9 11l3 3l8 -8" />
