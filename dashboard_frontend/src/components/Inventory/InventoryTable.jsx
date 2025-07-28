@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiService from '../../service/apiService';
 
 const InventoryTable = () => {
   const [inventory, setInventory] = useState([]);
@@ -11,11 +11,9 @@ const InventoryTable = () => {
   useEffect(() => {
     const fetchStockData = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/stock', {
-          withCredentials: true,
-        });
+        const response = await apiService.inventory.getStock();
 
-        const mappedData = response.data.map(item => ({
+        const mappedData = response.map(item => ({
           id: item.stockCode,
           name: item.stockName,
           location: item.stockLocation,
