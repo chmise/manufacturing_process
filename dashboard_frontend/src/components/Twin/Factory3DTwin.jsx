@@ -30,6 +30,10 @@ const Factory3DTwin = () => {
   const [hoverType, setHoverType] = useState(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
+  // 실시간 데이터 상태
+  const [realtimeData, setRealtimeData] = useState(null);
+  const realtimeIntervalRef = useRef(null);
+
   useEffect(() => {
     // Unity 통신 설정
     setupTestFunctions();
@@ -43,7 +47,6 @@ const Factory3DTwin = () => {
           if (user.companyName && window.SetCompanyName) {
             setTimeout(() => {
               window.SetCompanyName(user.companyName);
-              console.log(`자동으로 회사명 설정: ${user.companyName}`);
             }, 2000); // Unity 로딩 완료 후 설정
           }
         } catch (error) {
@@ -91,7 +94,6 @@ const Factory3DTwin = () => {
                   window.unityGlobalState.instance.Module.canvas.style.height = '100%';
                 }
                 
-                console.log('✅ Unity 캔버스 재연결 및 크기 조정 완료 (전체화면 없음)');
               }
             }
           }
@@ -100,6 +102,9 @@ const Factory3DTwin = () => {
       
       // 기존 Unity 인스턴스에서도 회사명 설정
       setCompanyNameFromUserData();
+      
+      // 실시간 데이터 폴링 시작
+      startRealtimeDataPolling();
       return;
     }
 
@@ -192,6 +197,9 @@ const Factory3DTwin = () => {
               
               // Unity 로딩 완료 후 회사명 자동 설정
               setCompanyNameFromUserData();
+              
+              // 실시간 데이터 폴링 시작
+              startRealtimeDataPolling();
             }).catch((error) => {
               console.error('❌ Unity 로드 실패:', error);
               setErrorMessage(`Unity 로드 실패: ${error.message || error.toString()}`);
@@ -271,6 +279,12 @@ const Factory3DTwin = () => {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
+      }
+
+      // 실시간 데이터 폴링 정리
+      if (realtimeIntervalRef.current) {
+        clearInterval(realtimeIntervalRef.current);
+        realtimeIntervalRef.current = null;
       }
 
       // Unity 인스턴스는 전역 상태에서 계속 유지
@@ -419,23 +433,18 @@ const Factory3DTwin = () => {
       }
     };
 
-    // Unity에서 호버 데이터 수신
+    // Unity에서 호버 데이터 수신 (로그 없음)
     window.ReceiveHoverFromUnity = (hoverData) => {
-      console.log('🎯 React에서 Unity 호버 데이터 수신:', hoverData);
-      
       try {
         const data = typeof hoverData === 'string' ? JSON.parse(hoverData) : hoverData;
-        console.log('📊 파싱된 데이터:', data);
         
         if (data.type === 'objectHovered') {
-          console.log('✨ handleUnityHover 호출');
           handleUnityHover(data.payload);
         } else if (data.type === 'hoverExit') {
-          console.log('🔚 handleUnityHoverExit 호출');
           handleUnityHoverExit();
         }
       } catch (error) {
-        console.error('Unity 호버 데이터 파싱 오류:', error);
+        // 호버 데이터 파싱 오류 무시
       }
     };
 
@@ -472,7 +481,6 @@ const Factory3DTwin = () => {
       try {
         if (unityInstance && unityInstance.SendMessage) {
           unityInstance.SendMessage('CompanyManager', 'SetCompanyName', companyName);
-          console.log(`Unity에 회사명 전송: ${companyName}`);
         }
       } catch (error) {
         console.error('회사명 설정 실패:', error);
@@ -585,10 +593,7 @@ const Factory3DTwin = () => {
 
   // Unity에서 온 호버 데이터 처리 (정확한 좌표 사용)
   const handleUnityHover = (payload) => {
-    console.log('🎯 Unity 호버 데이터 수신:', payload);
-    
     if (overlayOpen) {
-      console.log('⚠️ 오버레이가 열려있어서 호버 무시');
       return;
     }
     
@@ -596,11 +601,8 @@ const Factory3DTwin = () => {
     
     // Unity에서 받은 정확한 좌표 사용
     if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-      console.warn('⚠️ Unity에서 받은 좌표가 올바르지 않음:', position);
       return;
     }
-    
-    console.log('📍 Unity 정확한 좌표:', position);
     
     // objectId를 기반으로 호버 데이터 생성
     let hoverData = {};
@@ -628,30 +630,13 @@ const Factory3DTwin = () => {
     
     if (unityContainer) {
       const rect = unityContainer.getBoundingClientRect();
-      console.log('🎯 Unity 컨테이너 정보:', {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height
-      });
       
       // 정규화된 Unity 좌표(0~1)를 실제 픽셀 좌표로 변환
       adjustedPosition = {
         x: rect.left + (position.x * rect.width),
         y: rect.top + (position.y * rect.height)
       };
-      
-      console.log('📍 정규화 좌표 변환:', {
-        unity정규화: position,
-        캔버스크기: { width: rect.width, height: rect.height },
-        픽셀좌표: { 
-          x: position.x * rect.width, 
-          y: position.y * rect.height 
-        },
-        최종좌표: adjustedPosition
-      });
     } else {
-      console.warn('⚠️ Unity 컨테이너를 찾을 수 없음 - 대시보드 기준으로 계산');
       // 대시보드가 왼쪽에 있다고 가정하고 오프셋 추가
       adjustedPosition = {
         x: position.x + 450, // 대시보드 너비만큼 오프셋
@@ -663,17 +648,95 @@ const Factory3DTwin = () => {
     setHoverData(hoverData);
     setHoverPosition(adjustedPosition);
     setHoverVisible(true);
-    
-    console.log('✅ 툴팁 최종 위치:', adjustedPosition);
   };
 
-  // Unity 호버 종료 처리
+  // Unity 호버 종료 처리  
   const handleUnityHoverExit = () => {
-    console.log('🔚 Unity 호버 종료 신호 수신');
     setHoverVisible(false);
     setHoverData(null);
     setHoverType(null);
     setHoverPosition({ x: 0, y: 0 });
+  };
+
+  // 실시간 데이터 폴링 시작
+  const startRealtimeDataPolling = () => {
+    // 기존 폴링이 있다면 정리
+    if (realtimeIntervalRef.current) {
+      clearInterval(realtimeIntervalRef.current);
+    }
+
+    // 3초마다 실시간 데이터 조회 및 Unity 전송
+    realtimeIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/unity/realtime-data');
+        if (response.ok) {
+          const data = await response.json();
+          setRealtimeData(data);
+          sendRealtimeDataToUnity(data);
+        }
+      } catch (error) {
+        console.error('실시간 데이터 조회 실패:', error);
+      }
+    }, 3000);
+
+  };
+
+  // Unity로 실시간 데이터 전송
+  const sendRealtimeDataToUnity = (data) => {
+    if (!window.unityGlobalState?.instance) {
+      return;
+    }
+
+    try {
+      const unityInstance = window.unityGlobalState.instance;
+
+      // 제품 위치 업데이트
+      if (data.products) {
+        Object.entries(data.products).forEach(([carId, productData]) => {
+          const position = productData.position;
+          const updateData = {
+            carId: carId,
+            position: position,
+            status: productData.status,
+            currentStation: productData.currentStation
+          };
+          
+          unityInstance.SendMessage('DigitalTwinManager', 'UpdateProductPosition', JSON.stringify(updateData));
+        });
+      }
+
+      // 공정 상태 업데이트
+      if (data.stations) {
+        Object.entries(data.stations).forEach(([stationId, stationData]) => {
+          const updateData = {
+            stationId: stationId,
+            status: stationData.status,
+            currentProduct: stationData.currentProduct,
+            efficiency: stationData.efficiency
+          };
+          
+          unityInstance.SendMessage('DigitalTwinManager', 'UpdateStationStatus', JSON.stringify(updateData));
+        });
+      }
+
+      // 로봇 상태 업데이트
+      if (data.robots) {
+        Object.entries(data.robots).forEach(([robotId, robotData]) => {
+          const updateData = {
+            robotId: robotId,
+            status: robotData.status,
+            currentTask: robotData.currentTask,
+            batteryLevel: robotData.batteryLevel
+          };
+          
+          unityInstance.SendMessage('DigitalTwinManager', 'UpdateRobotStatus', JSON.stringify(updateData));
+        });
+      }
+
+
+    } catch (error) {
+      console.error('Unity 데이터 전송 실패:', error);
+    }
   };
 
   // Unity 통신 설정 초기화
