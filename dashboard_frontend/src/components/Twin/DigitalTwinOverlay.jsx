@@ -53,38 +53,74 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
 
   if (!isOpen) return null;
 
-  // 팝오버 위치 계산
+  // 팝오버 위치 계산 - 반투명 글래스모피즘 스타일 적용
   const popoverStyle = {
     position: 'fixed',
     left: position.x,
     top: position.y - 20,
     transform: 'translateX(-50%)',
-    backgroundColor: 'white',
+    background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.15), rgba(0, 100, 200, 0.25))',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(0, 150, 255, 0.3)',
     borderRadius: '12px',
     padding: '16px',
     minWidth: '320px',
     maxWidth: '450px',
     maxHeight: '400px',
     overflow: 'auto',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1)',
+    boxShadow: `
+      0 8px 32px rgba(0, 150, 255, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1)
+    `,
     zIndex: 1000,
     fontSize: '14px',
-    border: '1px solid #e0e0e0'
+    color: '#ffffff',
+    textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+    animation: 'overlaySlideIn 0.4s ease-out'
   };
 
   return (
     <div style={popoverStyle}>
+      {/* 네온 글로우 효과 */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: '-1px',
+          background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.4), rgba(0, 100, 200, 0.2))',
+          borderRadius: '12px',
+          zIndex: -1,
+          filter: 'blur(4px)',
+          opacity: '0.6'
+        }}
+      />
+      
       {/* 팝오버 화살표 */}
       <div style={{
         position: 'absolute',
-        bottom: '-9px',
+        bottom: '-8px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: 0,
         height: 0,
-        borderLeft: '9px solid transparent',
-        borderRight: '9px solid transparent',
-        borderTop: '9px solid white'
+        borderLeft: '8px solid transparent',
+        borderRight: '8px solid transparent',
+        borderTop: '8px solid rgba(0, 150, 255, 0.25)',
+        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'
+      }} />
+      
+      {/* 화살표 내부 */}
+      <div style={{
+        position: 'absolute',
+        bottom: '-6px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 0,
+        height: 0,
+        borderLeft: '6px solid transparent',
+        borderRight: '6px solid transparent',
+        borderTop: '6px solid rgba(0, 150, 255, 0.15)'
       }} />
       
       {/* 헤더 */}
@@ -94,34 +130,52 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
         alignItems: 'center',
         marginBottom: '16px',
         paddingBottom: '12px',
-        borderBottom: '2px solid #f0f0f0'
+        borderBottom: '1px solid rgba(0, 150, 255, 0.3)'
       }}>
         <h3 style={{
           margin: 0,
-          color: '#333',
+          color: '#ffffff',
           fontSize: '18px',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+          background: 'linear-gradient(45deg, #ffffff, #a8d8ff)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text'
         }}>
           {getTitle(clickType)}
         </h3>
         <button
           onClick={onClose}
           style={{
-            background: 'none',
-            border: 'none',
+            background: 'rgba(0, 150, 255, 0.2)',
+            border: '1px solid rgba(0, 150, 255, 0.4)',
+            color: '#ffffff',
             fontSize: '20px',
             cursor: 'pointer',
-            color: '#666',
             padding: '4px',
             width: '24px',
             height: '24px',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            transition: 'all 0.3s ease'
           }}
-          onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-          onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+          onMouseOver={(e) => {
+            e.target.style.background = 'rgba(0, 150, 255, 0.4)';
+            e.target.style.borderColor = 'rgba(0, 200, 255, 0.6)';
+            e.target.style.boxShadow = '0 4px 12px rgba(0, 150, 255, 0.3)';
+            e.target.style.transform = 'scale(1.05)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'rgba(0, 150, 255, 0.2)';
+            e.target.style.borderColor = 'rgba(0, 150, 255, 0.4)';
+            e.target.style.boxShadow = 'none';
+            e.target.style.transform = 'scale(1)';
+          }}
         >
           ×
         </button>
@@ -133,16 +187,18 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
           <div style={{
             textAlign: 'center',
             padding: '20px',
-            color: '#666'
+            color: '#ffffff',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
           }}>
             <div style={{
               width: '20px',
               height: '20px',
-              border: '2px solid #f3f3f3',
-              borderTop: '2px solid #3498db',
+              border: '2px solid rgba(0, 150, 255, 0.2)',
+              borderTop: '2px solid #00ccff',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
-              margin: '0 auto 10px'
+              margin: '0 auto 10px',
+              boxShadow: '0 0 20px rgba(0, 150, 255, 0.3)'
             }} />
             데이터를 불러오는 중...
           </div>
@@ -151,11 +207,14 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
         {error && (
           <div style={{
             padding: '16px',
-            backgroundColor: '#fee',
-            border: '1px solid #f88',
+            background: 'linear-gradient(135deg, rgba(255, 80, 80, 0.2), rgba(255, 60, 60, 0.3))',
+            border: '1px solid rgba(255, 80, 80, 0.5)',
             borderRadius: '8px',
-            color: '#c33',
-            textAlign: 'center'
+            color: '#ffffff',
+            textAlign: 'center',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
           }}>
             <strong>오류:</strong> {error}
             <div style={{ marginTop: '8px' }}>
@@ -163,12 +222,23 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
                 onClick={fetchData}
                 style={{
                   padding: '6px 12px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
+                  background: 'rgba(255, 80, 80, 0.3)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 80, 80, 0.5)',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '12px'
+                  fontSize: '12px',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = 'rgba(255, 80, 80, 0.5)';
+                  e.target.style.transform = 'scale(1.05)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'rgba(255, 80, 80, 0.3)';
+                  e.target.style.transform = 'scale(1)';
                 }}
               >
                 다시 시도
@@ -191,6 +261,17 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes overlaySlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-10px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-20px) scale(1);
+          }
         }
       `}</style>
     </div>
@@ -223,9 +304,11 @@ const RobotStatusDisplay = ({ data }) => {
       {/* 로봇 기본 정보 */}
       <div style={{
         padding: '12px',
-        backgroundColor: '#f8f9fa',
+        background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
         borderRadius: '8px',
-        border: '1px solid #e9ecef'
+        border: '1px solid rgba(0, 150, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
       }}>
         <div style={{ 
           fontSize: '16px', 
@@ -235,10 +318,10 @@ const RobotStatusDisplay = ({ data }) => {
         }}>
           {data.robotName}
         </div>
-        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+        <div style={{ fontSize: '12px', color: '#e0f2ff', marginBottom: '4px', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
           로봇 ID: {data.robotId}
         </div>
-        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+        <div style={{ fontSize: '12px', color: '#e0f2ff', marginBottom: '4px', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
           타입: {data.robotType}
         </div>
         <div style={{ fontSize: '12px', color: '#666' }}>
@@ -249,9 +332,11 @@ const RobotStatusDisplay = ({ data }) => {
       {/* 상태 정보 */}
       <div style={{
         padding: '12px',
-        backgroundColor: '#fff',
+        background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
         borderRadius: '8px',
-        border: '1px solid #e9ecef'
+        border: '1px solid rgba(0, 150, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
       }}>
         <div style={{
           display: 'flex',
@@ -259,7 +344,7 @@ const RobotStatusDisplay = ({ data }) => {
           alignItems: 'center',
           marginBottom: '8px'
         }}>
-          <span style={{ fontWeight: 'bold', color: '#333' }}>현재 상태:</span>
+          <span style={{ fontWeight: 'bold', color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>현재 상태:</span>
           <span style={{
             padding: '4px 8px',
             borderRadius: '12px',
@@ -414,7 +499,7 @@ const ProductStatusDisplay = ({ data }) => {
         }}>
           제품 ID: {data.productId}
         </div>
-        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+        <div style={{ fontSize: '12px', color: '#e0f2ff', marginBottom: '4px', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
           현재 위치: {data.stationName} ({data.stationCode})
         </div>
       </div>
