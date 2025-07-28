@@ -23,6 +23,9 @@ public class Company {
     @Column(name = "company_name", nullable = false)
     private String companyName;
 
+    @Column(name = "company_code", nullable = false, unique = true, length = 8)
+    private String companyCode;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -32,7 +35,8 @@ public class Company {
     }
 
     // 비즈니스 로직용 생성자
-    public Company(String companyName) {
+    public Company(String companyName, String companyCode) {
         this.companyName = companyName;
+        this.companyCode = companyCode;
     }
 }

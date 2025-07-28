@@ -44,6 +44,12 @@ public class User {
     @Column(name = "birth", nullable = false)
     private LocalDate birth;
 
+    @Column(name = "employee_code", length = 50)
+    private String employeeCode;
+
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
+
     // 외래키 관계 설정
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
@@ -55,6 +61,17 @@ public class User {
     }
 
     // 비즈니스 로직에 필요한 생성자
+    public User(Company company, String userName, String password, String email, LocalDate birth, String employeeCode, String name) {
+        this.company = company;
+        this.userName = userName;
+        this.password = password;
+        this.email = email;
+        this.birth = birth;
+        this.employeeCode = employeeCode;
+        this.name = name;
+    }
+
+    // 기존 호환성을 위한 생성자
     public User(Company company, String userName, String password, String email, LocalDate birth) {
         this.company = company;
         this.userName = userName;

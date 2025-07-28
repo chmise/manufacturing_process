@@ -16,34 +16,33 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/user")
 @RequiredArgsConstructor
 public class UserController {
     
     private final UserService userService;
 
-    @PostMapping("/register")
+    @PostMapping("/api/user/register")
     public ResponseEntity<JwtResponse> register(@RequestBody UserDTO userDTO) {
         JwtResponse response = userService.register(userDTO);
         return ResponseEntity.ok(response);
     }
     
-    @PostMapping("/login")
+    @PostMapping("/api/user/login")
     public ResponseEntity<JwtResponse> login(@RequestBody UserDTO userDTO) {
         JwtResponse response = userService.login(userDTO);
         return ResponseEntity.ok(response);
     }
     
-    @PostMapping("/refresh-token")
+    @PostMapping("/api/user/refresh-token")
     public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         JwtResponse response = userService.refreshToken(request);
         return ResponseEntity.ok(response);
     }
     
-    // 현재 사용자 정보 조회 (인증 필요)
-    @GetMapping("/me")
+    // 현재 사용자 정보 조회 (인증 필요) - 회사별 분리
+    @GetMapping("/api/{companyName}/user/me")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<Map<String, Object>> getCurrentUser() {
+    public ResponseEntity<Map<String, Object>> getCurrentUser(@PathVariable String companyName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetailsService.CustomUserPrincipal userPrincipal = 
             (CustomUserDetailsService.CustomUserPrincipal) authentication.getPrincipal();
@@ -52,16 +51,18 @@ public class UserController {
         userInfo.put("userId", userPrincipal.getUserId());
         userInfo.put("userName", userPrincipal.getUsername());
         userInfo.put("companyId", userPrincipal.getCompanyId());
+        userInfo.put("companyName", companyName);
         
         return ResponseEntity.ok(userInfo);
     }
     
-    // 로그아웃 (클라이언트에서 토큰 삭제하면 됨)
-    @PostMapping("/logout")
+    // 로그아웃 (클라이언트에서 토큰 삭제하면 됨) - 회사별 분리
+    @PostMapping("/api/{companyName}/user/logout")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<Map<String, String>> logout() {
+    public ResponseEntity<Map<String, String>> logout(@PathVariable String companyName) {
         Map<String, String> response = new HashMap<>();
         response.put("message", "로그아웃되었습니다.");
+        response.put("companyName", companyName);
         return ResponseEntity.ok(response);
     }
 }
