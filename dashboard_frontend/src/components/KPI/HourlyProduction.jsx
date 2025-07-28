@@ -35,6 +35,12 @@ const HourlyProduction = ({ rate = 0 }) => {
             </div>
           </div>
         </div>
+        <div className="progress mt-2" style={{ height: '4px' }}>
+          <div 
+            className={rate >= 40 ? 'progress-bar bg-success' : 'progress-bar bg-warning'}
+            style={{ width: `${Math.min((rate / 50) * 100, 100)}%` }}
+          ></div>
+        </div>
       </div>
     </div>
   );
