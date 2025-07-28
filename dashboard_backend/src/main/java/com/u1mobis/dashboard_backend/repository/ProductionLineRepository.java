@@ -33,4 +33,7 @@ public interface ProductionLineRepository extends JpaRepository<ProductionLine, 
     // 회사의 활성 라인 수 조회
     @Query("SELECT COUNT(pl) FROM ProductionLine pl WHERE pl.company.companyId = :companyId AND pl.isActive = true")
     long countActiveLinesByCompany(@Param("companyId") Long companyId);
+    
+    // 라인 코드로 단순 조회 (시뮬레이터용)
+    Optional<ProductionLine> findByLineCode(String lineCode);
 }

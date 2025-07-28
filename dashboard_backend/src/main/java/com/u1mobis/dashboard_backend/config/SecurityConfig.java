@@ -37,20 +37,24 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // JWT 사용시 CSRF 비활성화
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 사용 안함
             .authorizeHttpRequests(authz -> authz
-                // 인증 없이 접근 가능한 경로들 (정적 경로를 먼저 매칭)
+                // 시뮬레이터 및 Unity API 우선 허용 (가장 먼저 매칭)
+                .requestMatchers("/api/simulator/**").permitAll()
+                .requestMatchers("/api/unity/**").permitAll()
+                .requestMatchers("/api/digital-twin/**").permitAll()
+                // 인증 없이 접근 가능한 경로들
                 .requestMatchers("/api/user/login", "/api/user/register").permitAll()
                 .requestMatchers("/api/user/refresh-token").permitAll()
-                // 인증이 필요한 정적 경로들
-                .requestMatchers("/api/user/me", "/api/user/logout").authenticated()
-                // 회사별 사용자 정보는 인증 필요 (동적 경로는 나중에)
-                .requestMatchers("/api/user/{companyName}").authenticated()
                 .requestMatchers("/api/company/**").permitAll() // 모든 company 경로 허용
                 // 테스트용 API 엔드포인트 허용
                 .requestMatchers("/api/dashboard", "/api/production/status", "/api/kpi/realtime").permitAll()
                 .requestMatchers("/api/environment/**", "/api/stock", "/api/stocks/**").permitAll()
                 .requestMatchers("/api/click/**", "/api/iot/**", "/api/conveyor/**").permitAll()
-                // 정적 리소스 허용 (필요시)
+                // 정적 리소스 허용
                 .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
+                // 인증이 필요한 정적 경로들
+                .requestMatchers("/api/user/me", "/api/user/logout").authenticated()
+                // 회사별 사용자 정보는 인증 필요
+                .requestMatchers("/api/user/{companyName}").authenticated()
                 // 그 외 모든 요청은 인증 필요
                 .anyRequest().authenticated()
             )

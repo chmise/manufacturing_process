@@ -30,6 +30,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         
+        // 시뮬레이터 및 Unity API는 JWT 검증 건너뛰기
+        String requestPath = request.getRequestURI();
+        if (requestPath.startsWith("/api/simulator/") || 
+            requestPath.startsWith("/api/unity/") || 
+            requestPath.startsWith("/api/digital-twin/") ||
+            requestPath.startsWith("/api/company/") ||
+            requestPath.equals("/api/dashboard") ||
+            requestPath.equals("/api/production/status") ||
+            requestPath.equals("/api/kpi/realtime")) {
+            
+            log.debug("JWT 검증 건너뛰기: {}", requestPath);
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         final String requestTokenHeader = request.getHeader("Authorization");
         
         String username = null;

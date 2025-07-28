@@ -15,6 +15,7 @@ import com.u1mobis.dashboard_backend.entity.CurrentProduction;
 import com.u1mobis.dashboard_backend.service.ProductionService;
 import com.u1mobis.dashboard_backend.service.KPICalculationService;
 import com.u1mobis.dashboard_backend.service.EnvironmentService;
+import com.u1mobis.dashboard_backend.service.UnityRealtimeDataService;
 import com.u1mobis.dashboard_backend.repository.RobotRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -30,88 +31,18 @@ public class UnityTwinController {
     private final ProductionService productionService;
     private final KPICalculationService kpiCalculationService;
     private final EnvironmentService environmentService;
+    private final UnityRealtimeDataService unityRealtimeDataService;
     private final RobotRepository robotRepository;
 
     /**
-     * Unity 트윈을 위한 전체 실시간 데이터
+     * Unity 트윈을 위한 전체 실시간 데이터 (시뮬레이터 연동)
      */
     @GetMapping("/realtime-data")
     public ResponseEntity<Map<String, Object>> getUnityRealtimeData() {
-        Map<String, Object> unityData = new HashMap<>();
-
         try {
-            // 생산 현황 데이터
-            Map<String, Object> productionStatus = productionService.getCurrentProductionStatus();
-            @SuppressWarnings("unchecked")
-            List<CurrentProduction> processingProducts = (List<CurrentProduction>) productionStatus.get("processing_products");
+            // 새로운 UnityRealtimeDataService 사용
+            Map<String, Object> unityData = unityRealtimeDataService.getRealtimeDataForUnity();
             
-            // Unity용 제품 위치 데이터 변환 (실제 DB 스키마 기반)
-            Map<String, Object> products = new HashMap<>();
-            for (CurrentProduction product : processingProducts) {
-                String unityCarId = convertToUnityCarId(product.getProductId());
-                products.put(unityCarId, Map.of(
-                    "productId", product.getProductId(),
-                    "currentStation", product.getCurrentStation(), // DB에 실제 존재하는 필드
-                    "status", product.getStatus(),
-                    "reworkCount", product.getReworkCount() != null ? product.getReworkCount() : 0,
-                    "productColor", product.getProductColor() != null ? product.getProductColor() : "WHITE", // Unity에서 차량 색상 표시
-                    "lineId", product.getLineId(), // 라인 정보
-                    "position", getProductPosition(product.getCurrentStation()),
-                    "startTime", product.getStartTime(),
-                    "dueDate", product.getDueDate()
-                ));
-            }
-
-            // 공정별 상태 데이터
-            Map<String, Object> stations = Map.of(
-                "DoorStation", Map.of(
-                    "status", "OPERATING",
-                    "currentProduct", getCurrentProductAtStation("DOOR"),
-                    "efficiency", 85.2
-                ),
-                "WaterLeakTestStation", Map.of(
-                    "status", "OPERATING", 
-                    "currentProduct", getCurrentProductAtStation("WATER_LEAK"),
-                    "efficiency", 92.1
-                )
-            );
-
-            // 실제 데이터베이스에서 로봇 상태 데이터 조회
-            Map<String, Object> robots = new HashMap<>();
-            try {
-                var allRobots = robotRepository.findAll();
-                for (var robot : allRobots) {
-                    robots.put(robot.getRobotId(), Map.of(
-                        "robotId", robot.getRobotId(),
-                        "robotName", robot.getRobotName(),
-                        "companyId", robot.getCompanyId(),
-                        "lineId", robot.getLineId(),
-                        "status", "ACTIVE", // 실제로는 별도 상태 테이블에서 조회
-                        "currentTask", determineCurrentTask(robot.getRobotId()),
-                        "batteryLevel", 95 // 실제로는 IoT 센서 데이터에서 조회
-                    ));
-                }
-            } catch (Exception e) {
-                log.warn("로봇 데이터 조회 실패, 기본값 사용", e);
-                // 기본값으로 폴백
-                robots = Map.of(
-                    "ROBOT_001", Map.of(
-                        "status", "ACTIVE",
-                        "currentTask", "DOOR_ASSEMBLY",
-                        "batteryLevel", 87
-                    )
-                );
-            }
-
-            // KPI 데이터
-            Map<String, Object> kpiData = kpiCalculationService.getRealTimeKPI();
-
-            unityData.put("products", products);
-            unityData.put("stations", stations);
-            unityData.put("robots", robots);
-            unityData.put("kpi", kpiData);
-            unityData.put("timestamp", System.currentTimeMillis());
-
             return ResponseEntity.ok(unityData);
 
         } catch (Exception e) {
@@ -137,7 +68,7 @@ public class UnityTwinController {
                 "unityCarId", unityCarId,
                 "productId", productId,
                 "currentStation", currentStation,
-                "position", getProductPosition(currentStation)
+                "position", getStationPosition(currentStation)
             ));
         } catch (Exception e) {
             log.error("제품 위치 조회 실패: {}", productId, e);
@@ -211,5 +142,17 @@ public class UnityTwinController {
             return "WATER_LEAK_TEST";
         }
         return "IDLE";
+    }
+    
+    private Map<String, Object> getStationPosition(String station) {
+        // Unity 좌표계에 맞는 기본 위치 반환
+        switch (station) {
+            case "DoorStation":
+                return Map.of("x", -15.0, "y", 0.5, "z", 0.0);
+            case "WaterLeakTestStation":
+                return Map.of("x", 15.0, "y", 0.5, "z", 0.0);
+            default:
+                return Map.of("x", 0.0, "y", 0.5, "z", 0.0);
+        }
     }
 }

@@ -26,6 +26,9 @@ public class Company {
     @Column(name = "company_code", nullable = false, unique = true, length = 8)
     private String companyCode;
 
+    @Column(name = "description")
+    private String description;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
