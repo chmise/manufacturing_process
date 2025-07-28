@@ -22,13 +22,14 @@ public class MQTTMessageProcessor {
     private final ProductionService productionService;
     private final KPICalculationService kpiCalculationService;
     private final EnvironmentService environmentService;
-    private final ConveyorService conveyorService;  // 추가
+    private final ConveyorService conveyorService;
     
     // MQTT 메시지 처리 (가상의 메서드 - 실제로는 MQTT 라이브러리 사용)
     public void processMQTTMessage(String topic, String payload) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode data = mapper.readTree(payload);
+            
             
             if (topic.contains("/production/completed")) {
                 // 생산 완료 처리
