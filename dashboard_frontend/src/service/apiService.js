@@ -352,12 +352,6 @@ export const apiService = {
     getStationInfo: (stationId) => httpClient.get(`/click/station/${stationId}`)
   },
 
-  // 로봇 관리 API
-  robots: {
-    getAllRobots: (companyName = null) => httpClient.get('/robots', companyName),
-    getRobotData: (robotId, companyName = null) => httpClient.get(`/click/robot/${robotId}`, companyName)
-  },
-
   // 알림 관리 API
   alerts: {
     getAlerts: (companyName = null) => httpClient.get('/alerts', companyName),
