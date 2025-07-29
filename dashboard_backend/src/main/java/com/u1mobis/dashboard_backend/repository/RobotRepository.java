@@ -12,24 +12,28 @@ import java.util.Optional;
 @Repository
 public interface RobotRepository extends JpaRepository<Robot, String> {
 
-    // 회사별 로봇 조회
+    // ===== 기존 메서드들 =====
+    
     List<Robot> findByCompanyId(Long companyId);
-
-    // 로봇 이름으로 조회
     Optional<Robot> findByRobotName(String robotName);
-
-    // 회사별 로봇 이름 조회
     Optional<Robot> findByCompanyIdAndRobotName(Long companyId, String robotName);
-
-    // 특정 회사의 로봇 개수
     long countByCompanyId(Long companyId);
 
-    // 로봇 ID와 회사 ID로 조회 (보안용)
     @Query("SELECT r FROM Robot r WHERE r.robotId = :robotId AND r.companyId = :companyId")
     Optional<Robot> findByRobotIdAndCompanyId(@Param("robotId") String robotId, 
                                              @Param("companyId") Long companyId);
 
-    // 로봇 상태를 포함한 조회 (향후 확장용)
     @Query("SELECT r FROM Robot r LEFT JOIN FETCH r.company WHERE r.robotId = :robotId")
     Optional<Robot> findRobotWithCompany(@Param("robotId") String robotId);
+
+    // ===== Digital Twin용 추가 메서드들 =====
+    
+    List<Robot> findByStationCode(String stationCode);
+    List<Robot> findByStatusText(String statusText);
+    
+    @Query("SELECT COUNT(r) FROM Robot r WHERE r.companyId = :companyId AND r.statusText = '작동중'")
+    Long countActiveRobotsByCompanyId(@Param("companyId") Long companyId);
+    
+    @Query("SELECT COUNT(r) FROM Robot r WHERE r.statusText = '작동중'")
+    Long countActiveRobots();
 }
