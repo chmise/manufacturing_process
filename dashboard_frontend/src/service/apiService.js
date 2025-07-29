@@ -400,6 +400,64 @@ export const apiService = {
         return response.json();
       });
     }
+  },
+
+  // 시뮬레이터 관련 API (회사별 경로 사용)
+  simulator: {
+    // 시뮬레이션 시작
+    start: (companyName = null) => httpClient.post('/simulator/start', {}, companyName),
+    
+    // 시뮬레이션 중지
+    stop: (companyName = null) => httpClient.post('/simulator/stop', {}, companyName),
+    
+    // 시뮬레이션 상태 조회
+    getStatus: (companyName = null) => httpClient.get('/simulator/status', companyName),
+    
+    // 시뮬레이션 설정 변경
+    updateConfig: (config, companyName = null) => httpClient.post('/simulator/config', config, companyName),
+    
+    // 시뮬레이션 통계 조회
+    getStatistics: (companyName = null) => httpClient.get('/simulator/statistics', companyName),
+    
+    // 시뮬레이션 리셋
+    reset: (companyName = null) => httpClient.post('/simulator/reset', {}, companyName)
+  },
+
+  // Unity Twin 관련 API
+  unity: {
+    // Unity 실시간 데이터 조회
+    getRealtimeData: () => {
+      // Unity 데이터는 인증 없이도 접근 가능하도록 설정
+      return fetch(`${API_BASE_URL}/unity/realtime-data`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      });
+    },
+    
+    // 제품 위치 조회
+    getProductPosition: (productId) => 
+      fetch(`${API_BASE_URL}/unity/product/${productId}/position`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).then(response => response.json()),
+    
+    // 스테이션 현재 제품 조회
+    getStationCurrentProduct: (stationCode) =>
+      fetch(`${API_BASE_URL}/unity/station/${stationCode}/current-product`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).then(response => response.json())
   }
 };
 

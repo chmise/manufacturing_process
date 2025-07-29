@@ -124,6 +124,26 @@ const Layout = ({ children }) => {
                   <span className="nav-link-title">관리</span>
                 </Link>
               </li>
+              <li className={`nav-item ${isActive('/simulator')}`}>
+                <Link className="nav-link" to={getCompanyUrl('/simulator')}>
+                  <span className="nav-link-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-cpu">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <rect x="5" y="5" width="14" height="14" rx="1" />
+                      <path d="M9 9h6v6h-6z" />
+                      <path d="M3 10h2" />
+                      <path d="M3 14h2" />
+                      <path d="M10 3v2" />
+                      <path d="M14 3v2" />
+                      <path d="M21 10h-2" />
+                      <path d="M21 14h-2" />
+                      <path d="M14 21v-2" />
+                      <path d="M10 21v-2" />
+                    </svg>
+                  </span>
+                  <span className="nav-link-title">시뮬레이터</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
