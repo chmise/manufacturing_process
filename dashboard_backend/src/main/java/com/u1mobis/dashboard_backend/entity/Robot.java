@@ -1,10 +1,9 @@
 package com.u1mobis.dashboard_backend.entity;
 
 import jakarta.persistence.*;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.*;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "robots")
@@ -28,7 +27,43 @@ public class Robot {
     @Column(name = "line_id", nullable = false)
     private Long lineId;
 
-    // 외래키 관계 (나중에 설정할 예정)
+    // ===== Digital Twin 필드 추가 =====
+    
+    @Column(name = "robot_type")
+    private String robotType;
+    
+    @Column(name = "station_code")
+    private String stationCode;
+    
+    @Column(name = "status_text")
+    private String statusText;
+    
+    @Column(name = "motor_status")
+    private Integer motorStatus;
+    
+    @Column(name = "led_status")
+    private Integer ledStatus;
+    
+    @Column(name = "cycle_time")
+    private Integer cycleTime;
+    
+    @Column(name = "production_count")
+    private Integer productionCount;
+    
+    @Column(name = "quality")
+    private Double quality;
+    
+    @Column(name = "temperature")
+    private Double temperature;
+    
+    @Column(name = "power_consumption")
+    private Double powerConsumption;
+    
+    @UpdateTimestamp
+    @Column(name = "last_update")
+    private LocalDateTime lastUpdate;
+
+    // 기존 외래키 관계 유지
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", insertable = false, updatable = false)
     private Company company;
@@ -37,7 +72,7 @@ public class Robot {
     @JoinColumn(name = "line_id", insertable = false, updatable = false)
     private ProductionLine productionLine;
 
-    // 비즈니스 로직용 생성자
+    // 기존 생성자 유지
     public Robot(Long companyId, String robotName) {
         this.companyId = companyId;
         this.robotName = robotName;
