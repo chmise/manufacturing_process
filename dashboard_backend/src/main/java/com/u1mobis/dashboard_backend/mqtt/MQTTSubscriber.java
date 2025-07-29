@@ -56,6 +56,7 @@ public class MQTTSubscriber {
             mqttClient.subscribe("factory/+/+/operations");
             mqttClient.subscribe("factory/+/+/production/completed");
             mqttClient.subscribe("factory/+/+/conveyor");
+            mqttClient.subscribe("factory/+/robot");
 
             log.info("MQTT 구독 완료 - 브로커: tcp://localhost:1883");
 

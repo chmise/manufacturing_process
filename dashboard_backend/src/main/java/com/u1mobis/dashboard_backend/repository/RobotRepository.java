@@ -28,7 +28,6 @@ public interface RobotRepository extends JpaRepository<Robot, String> {
 
     // ===== Digital Twin용 추가 메서드들 =====
     
-    List<Robot> findByStationCode(String stationCode);
     List<Robot> findByStatusText(String statusText);
     
     @Query("SELECT COUNT(r) FROM Robot r WHERE r.companyId = :companyId AND r.statusText = '작동중'")
