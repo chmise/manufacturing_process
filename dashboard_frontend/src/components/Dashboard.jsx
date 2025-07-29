@@ -24,65 +24,69 @@ const Dashboard = () => {
 
   // 현재 로그인된 사용자 정보 로드
   useEffect(() => {
-    const loadCompanyInfo = async () => {
+    const loadUserInfo = () => {
       try {
-        // 실제 회사 목록 가져오기
-        const companies = await apiService.company.getAllCompanies();
+        // localStorage에서 실제 로그인된 사용자 정보 가져오기
+        const storedUserData = localStorage.getItem('userData');
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
         
-        if (companies && companies.length > 0) {
-          // 첫 번째 회사를 기본으로 사용
-          const firstCompany = companies[0];
-          const defaultUser = { userId: 'testuser', userName: '테스트사용자' };
+        if (isLoggedIn === 'true' && storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          console.log('저장된 사용자 데이터:', userData);
           
           setCompanyInfo({
-            companyId: firstCompany.companyId,
-            companyName: firstCompany.companyName,
-            companyCode: firstCompany.companyCode
+            companyName: userData.companyName,
+            companyId: userData.companyId
           });
-          setUserInfo(defaultUser);
-          
-          // API 호출을 위한 회사 정보를 localStorage에 설정
-          localStorage.setItem('userData', JSON.stringify({
-            companyName: firstCompany.companyCode,
-            companyCode: firstCompany.companyCode
-          }));
+          setUserInfo({
+            userId: userData.userId,
+            userName: userData.userName
+          });
         } else {
-          // 회사가 없는 경우 기본값 사용
-          const defaultCompany = { companyCode: 'DEFAULT', companyName: '테스트회사' };
+          // 로그인되지 않은 경우 기본값 사용
+          const defaultCompany = { companyName: '유원대학교' };
           const defaultUser = { userId: 'testuser', userName: '테스트사용자' };
           
           setCompanyInfo(defaultCompany);
           setUserInfo(defaultUser);
-          
-          localStorage.setItem('userData', JSON.stringify({
-            companyName: defaultCompany.companyCode,
-            companyCode: defaultCompany.companyCode
-          }));
         }
       } catch (error) {
-        console.error('회사 정보 로드 실패:', error);
+        console.error('사용자 정보 로드 실패:', error);
         // 에러 시 기본값 사용
-        const defaultCompany = { companyCode: 'DEFAULT', companyName: '테스트회사' };
+        const defaultCompany = { companyName: '유원대학교' };
         const defaultUser = { userId: 'testuser', userName: '테스트사용자' };
         
         setCompanyInfo(defaultCompany);
         setUserInfo(defaultUser);
-        
-        localStorage.setItem('userData', JSON.stringify({
-          companyName: defaultCompany.companyCode,
-          companyCode: defaultCompany.companyCode
-        }));
       }
     };
 
-    loadCompanyInfo();
+    loadUserInfo();
   }, []);
 
   // WebSocket 연결 및 알림 관리
-  const { alerts, removeAlert } = useWebSocket(
-    companyInfo?.companyName || '테스트회사', 
+  const { alerts, removeAlert, realtimeData } = useWebSocket(
+    companyInfo?.companyName || '유원대학교', 
     userInfo?.userId || 'anonymous'
   );
+
+  // 실시간 데이터 처리
+  useEffect(() => {
+    if (realtimeData) {
+      console.log('실시간 데이터 수신:', realtimeData);
+      
+      // 데이터 타입에 따라 처리
+      if (realtimeData.type === 'environment_update') {
+        console.log('환경 데이터 업데이트:', realtimeData.data);
+        setLastUpdated(new Date());
+        // 환경 데이터 업데이트 로직 추가 가능
+      } else if (realtimeData.type === 'kpi_update') {
+        console.log('KPI 데이터 업데이트:', realtimeData.data);
+        setLastUpdated(new Date());
+        // KPI 데이터 업데이트 로직 추가 가능
+      }
+    }
+  }, [realtimeData]);
 
   useEffect(() => {
     let mounted = true;

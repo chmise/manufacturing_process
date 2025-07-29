@@ -24,6 +24,7 @@ const useWebSocket = (companyName, userId) => {
   const stompClient = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [alerts, setAlerts] = useState([]);
+  const [realtimeData, setRealtimeData] = useState(null);
 
   useEffect(() => {
     if (!companyName || !userId) return;
@@ -70,6 +71,20 @@ const useWebSocket = (companyName, userId) => {
                 prevAlerts.filter(a => a.id !== alertWithId.id)
               );
             }, 5000);
+          });
+
+          // 회사별 실시간 데이터 구독
+          const dataTopic = `/topic/data/${companyName}`;
+          stompClient.current.subscribe(dataTopic, (message) => {
+            const data = JSON.parse(message.body);
+            console.log('실시간 데이터 수신:', data);
+            
+            setRealtimeData(data);
+            
+            // 부모 컴포넌트에 데이터 전달을 위한 커스텀 이벤트 발생
+            window.dispatchEvent(new CustomEvent('realtimeDataUpdate', { 
+              detail: data 
+            }));
           });
 
           // 구독 메시지 전송
@@ -119,6 +134,7 @@ const useWebSocket = (companyName, userId) => {
   return {
     isConnected,
     alerts,
+    realtimeData,
     removeAlert
   };
 };
