@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './AlertHistory.css';
 
-const AlertHistory = ({ alertHistory, clearHistory }) => {
+const AlertHistory = ({ alertHistory, clearHistory, removeIndividualAlert }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const getAlertIcon = (alertType) => {
@@ -163,6 +163,24 @@ const AlertHistory = ({ alertHistory, clearHistory }) => {
                         {formatTime(alert.timestamp)}
                       </small>
                     </div>
+                  </div>
+                  <div className="col-auto">
+                    <button 
+                      className="btn btn-sm btn-ghost-secondary"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (removeIndividualAlert && (alert.id || alert.alertId)) {
+                          removeIndividualAlert(alert.id || alert.alertId);
+                        }
+                      }}
+                      title="이 알림 삭제"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6 6 18"/>
+                        <path d="m6 6 12 12"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>

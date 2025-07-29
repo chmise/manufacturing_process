@@ -250,7 +250,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">OEE(설비 종합 효율)</h3>
                       <ProductionStatus 
-                        oee={dashboardData?.kpi?.oee || 0}
+                        oee={dashboardData?.kpi?.oee !== undefined && !isNaN(Number(dashboardData?.kpi?.oee)) ? dashboardData.kpi.oee : 0}
                       />
                     </div>
                   </div>
@@ -261,7 +261,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">OTD(정기납기율)</h3>
                       <OTDStatus 
-                        otd={dashboardData?.kpi?.otd || 0}
+                        otd={dashboardData?.kpi?.otd !== undefined && !isNaN(Number(dashboardData?.kpi?.otd)) ? dashboardData.kpi.otd : 0}
                       />
                     </div>
                   </div>
@@ -272,7 +272,7 @@ const Dashboard = () => {
                     <div className="card-body">
                       <h3 className="card-title">FTY(일발양품률)</h3>
                       <FTYStatus 
-                        fty={dashboardData?.kpi?.fty || 0}
+                        fty={dashboardData?.kpi?.fty !== undefined && !isNaN(Number(dashboardData?.kpi?.fty)) ? dashboardData.kpi.fty : 0}
                       />
                     </div>
                   </div>

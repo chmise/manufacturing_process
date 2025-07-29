@@ -14,12 +14,13 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
         return
       }
 
-      const ftyValue = parseFloat(fty);
+      // 안전한 값 검증 및 변환
+      const ftyValue = isNaN(parseFloat(fty)) || parseFloat(fty) < 0 ? 0 : parseFloat(fty);
       const defective = 100 - ftyValue;
 
       // FTY 성과 구간별 색상 적용
       const gradeInfo = getKPIColor(ftyValue, 'fty');
-      console.log('FTY Value:', ftyValue, 'Grade Info:', gradeInfo);
+      console.log('FTY Value:', ftyValue, 'Grade Info:', gradeInfo, 'Original fty:', fty);
 
       const options = {
         chart: {
@@ -51,7 +52,7 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
                   fontWeight: 600,
                   label: 'FTY',
                   formatter: function () {
-                    return ftyValue.toFixed(1) + '%';
+                    return (isNaN(ftyValue) ? 0 : ftyValue).toFixed(1) + '%';
                   }
                 }
               }
