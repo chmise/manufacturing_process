@@ -293,6 +293,228 @@ public class MQTTPublisher {
     }
     
     /**
+     * 제품 이동 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/product/moved
+     */
+    public void publishProductMoved(String companyCode, Long lineId, String productId, 
+                                  String fromStation, String toStation, double positionX, double positionY, int moveDuration) {
+        try {
+            String topic = String.format("factory/%s/%d/product/moved", companyCode, lineId);
+            
+            final String prodId = productId;
+            final String from = fromStation;
+            final String to = toStation;
+            final double posX = positionX;
+            final double posY = positionY;
+            final int duration = moveDuration;
+            
+            Object data = new Object() {
+                public final String product_id = prodId;
+                public final Long line_id = lineId;
+                public final String from_station = from;
+                public final String to_station = to;
+                public final double position_x = posX;
+                public final double position_y = posY;
+                public final int move_duration = duration;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("제품 이동 데이터 발송 실패 - 회사: {}, 라인: {}", companyCode, lineId, e);
+        }
+    }
+    
+    /**
+     * 제품 구역 도착 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/product/arrived/{areaType}
+     */
+    public void publishProductArrived(String companyCode, Long lineId, String productId, 
+                                    String areaType, double positionX, double positionY) {
+        try {
+            String topic = String.format("factory/%s/%d/product/arrived/%s", companyCode, lineId, areaType);
+            
+            final String prodId = productId;
+            final String area = areaType;
+            final double posX = positionX;
+            final double posY = positionY;
+            
+            Object data = new Object() {
+                public final String product_id = prodId;
+                public final Long line_id = lineId;
+                public final String area_type = area;
+                public final double position_x = posX;
+                public final double position_y = posY;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("제품 도착 데이터 발송 실패 - 회사: {}, 라인: {}", companyCode, lineId, e);
+        }
+    }
+    
+    /**
+     * 로봇 작업 시작 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/{robotId}/work/started
+     */
+    public void publishRobotWorkStarted(String companyCode, Long lineId, String robotId, 
+                                      String productId, String doorType, int workDuration) {
+        try {
+            String topic = String.format("factory/%s/%d/%s/work/started", companyCode, lineId, robotId);
+            
+            final String robId = robotId;
+            final String prodId = productId;
+            final String door = doorType;
+            final int duration = workDuration;
+            
+            Object data = new Object() {
+                public final String robot_id = robId;
+                public final Long line_id = lineId;
+                public final String product_id = prodId;
+                public final String door_type = door;
+                public final int work_duration = duration;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("로봇 작업 시작 데이터 발송 실패 - 회사: {}, 라인: {}, 로봇: {}", companyCode, lineId, robotId, e);
+        }
+    }
+    
+    /**
+     * 로봇 작업 완료 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/{robotId}/work/completed
+     */
+    public void publishRobotWorkCompleted(String companyCode, Long lineId, String robotId, 
+                                        String productId, String doorType, int actualWorkTime) {
+        try {
+            String topic = String.format("factory/%s/%d/%s/work/completed", companyCode, lineId, robotId);
+            
+            final String robId = robotId;
+            final String prodId = productId;
+            final String door = doorType;
+            final int actualTime = actualWorkTime;
+            
+            Object data = new Object() {
+                public final String robot_id = robId;
+                public final Long line_id = lineId;
+                public final String product_id = prodId;
+                public final String door_type = door;
+                public final int actual_work_time = actualTime;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("로봇 작업 완료 데이터 발송 실패 - 회사: {}, 라인: {}, 로봇: {}", companyCode, lineId, robotId, e);
+        }
+    }
+    
+    /**
+     * 전체 로봇 작업 완료 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/robots/all/completed
+     */
+    public void publishAllRobotsCompleted(String companyCode, Long lineId, String productId, 
+                                        String[] completedRobots, int totalWorkTime) {
+        try {
+            String topic = String.format("factory/%s/%d/robots/all/completed", companyCode, lineId);
+            
+            final String prodId = productId;
+            final String[] robots = completedRobots;
+            final int totalTime = totalWorkTime;
+            
+            Object data = new Object() {
+                public final String product_id = prodId;
+                public final Long line_id = lineId;
+                public final String[] robots_completed = robots;
+                public final int total_work_time = totalTime;
+                public final boolean all_doors_attached = true;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("전체 로봇 완료 데이터 발송 실패 - 회사: {}, 라인: {}", companyCode, lineId, e);
+        }
+    }
+    
+    /**
+     * 수밀검사 시작 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/inspection/started
+     */
+    public void publishInspectionStarted(String companyCode, Long lineId, String productId, 
+                                       String inspectionType, int testDuration, double pressureApplied) {
+        try {
+            String topic = String.format("factory/%s/%d/inspection/started", companyCode, lineId);
+            
+            final String prodId = productId;
+            final String inspection = inspectionType;
+            final int duration = testDuration;
+            final double pressure = pressureApplied;
+            
+            Object data = new Object() {
+                public final String product_id = prodId;
+                public final Long line_id = lineId;
+                public final String inspection_type = inspection;
+                public final int test_duration = duration;
+                public final double pressure_applied = pressure;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("수밀검사 시작 데이터 발송 실패 - 회사: {}, 라인: {}", companyCode, lineId, e);
+        }
+    }
+    
+    /**
+     * 수밀검사 완료 데이터 발송
+     * 토픽: factory/{companyCode}/{lineId}/inspection/completed
+     */
+    public void publishInspectionCompleted(String companyCode, Long lineId, String productId, 
+                                         String inspectionType, int actualDuration, String result, boolean leakDetected) {
+        try {
+            String topic = String.format("factory/%s/%d/inspection/completed", companyCode, lineId);
+            
+            final String prodId = productId;
+            final String inspection = inspectionType;
+            final int duration = actualDuration;
+            final String testResult = result;
+            final boolean leak = leakDetected;
+            
+            Object data = new Object() {
+                public final String product_id = prodId;
+                public final Long line_id = lineId;
+                public final String inspection_type = inspection;
+                public final int test_duration = duration;
+                public final String result = testResult;
+                public final boolean leak_detected = leak;
+                public final String timestamp = java.time.LocalDateTime.now().toString();
+            };
+            
+            String payload = objectMapper.writeValueAsString(data);
+            publishMessage(topic, payload);
+            
+        } catch (Exception e) {
+            log.error("수밀검사 완료 데이터 발송 실패 - 회사: {}, 라인: {}", companyCode, lineId, e);
+        }
+    }
+
+    /**
      * MQTT 메시지 발송
      */
     private void publishMessage(String topic, String payload) {

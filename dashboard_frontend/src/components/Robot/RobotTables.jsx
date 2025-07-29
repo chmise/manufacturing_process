@@ -1,7 +1,93 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../../service/apiService';
 
 const RobotTable = ({ stationsData = [], lastUpdated }) => {
-  // IoT 데이터를 기존 로봇 테이블 형식으로 변환
+  const [robots, setRobots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // 데이터베이스에서 로봇 데이터 가져오기
+  useEffect(() => {
+    const fetchRobots = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.robot.getAllRobots();
+        
+        if (response && Array.isArray(response)) {
+          setRobots(response);
+        } else {
+          console.error('잘못된 로봇 데이터 형식:', response);
+          setRobots([]);
+        }
+      } catch (error) {
+        console.error('로봇 데이터 조회 실패:', error);
+        setError(error.message);
+        setRobots([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRobots();
+  }, []);
+
+  // 데이터베이스 로봇 데이터를 테이블 형식으로 변환
+  const transformDatabaseRobot = (robot) => {
+    const getStatusText = (statusText) => {
+      if (!statusText) return '알 수 없음';
+      return statusText;
+    };
+
+    const getStatusColor = (statusText) => {
+      switch (statusText) {
+        case '작동중': 
+        case '가동중': return 'bg-primary text-white';
+        case '대기중': return 'bg-warning text-dark';
+        case '정지': 
+        case '중지': return 'bg-danger text-white';
+        default: return 'bg-secondary text-white';
+      }
+    };
+
+    const getUtilization = (statusText, quality) => {
+      if (statusText === '작동중' && quality) {
+        return `${(quality * 100).toFixed(1)}%`;
+      }
+      return '0.0%';
+    };
+
+    const getAlarmStatus = (statusText) => {
+      if (statusText === '작동중') return '정상';
+      if (statusText === '대기중') return '경고';
+      return '심각';
+    };
+
+    const getConnectionStatus = (statusText) => {
+      return statusText !== '정지' ? '온라인' : '오프라인';
+    };
+
+    return {
+      id: robot.robotId || 'Unknown',
+      name: robot.robotName || '이름 없음',
+      robotType: robot.robotType || '일반',
+      location: robot.stationCode || `Line-${robot.lineId || 'A'}`,
+      status: getStatusText(robot.statusText),
+      statusColor: getStatusColor(robot.statusText),
+      utilization: getUtilization(robot.statusText, robot.quality),
+      cycleTime: robot.cycleTime ? `${robot.cycleTime}초` : '-',
+      alarm: getAlarmStatus(robot.statusText),
+      health: robot.quality ? `${Math.round(robot.quality * 100)}점` : '-',
+      workCount: robot.productionCount ? `${robot.productionCount}건` : '0건',
+      connection: getConnectionStatus(robot.statusText),
+      temperature: robot.temperature || 0,
+      powerConsumption: robot.powerConsumption || 0,
+      lastUpdate: robot.lastUpdate ? new Date(robot.lastUpdate).toLocaleString() : '-',
+      motorStatus: robot.motorStatus,
+      ledStatus: robot.ledStatus
+    };
+  };
+
+  // IoT 데이터를 기존 로봇 테이블 형식으로 변환 (백업용)
   const transformStationToRobot = (station, index) => {
     const robotMap = {
       'ROBOT_ARM_01': '로봇팔#1',
@@ -102,10 +188,12 @@ const RobotTable = ({ stationsData = [], lastUpdated }) => {
     };
   };
 
-  // 스테이션 데이터를 로봇 데이터로 변환
-  const robots = stationsData.length > 0 
-    ? stationsData.map(transformStationToRobot)
-    : [];
+  // 데이터베이스 로봇 데이터 우선 사용, 없으면 IoT 스테이션 데이터 사용
+  const displayRobots = robots.length > 0 
+    ? robots.map(transformDatabaseRobot)
+    : stationsData.length > 0 
+      ? stationsData.map(transformStationToRobot)
+      : [];
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -140,8 +228,37 @@ const RobotTable = ({ stationsData = [], lastUpdated }) => {
     return 'text-danger';
   };
 
+  // 로딩 상태 표시
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">로딩 중...</span>
+        </div>
+        <div className="mt-2">로봇 데이터를 불러오는 중...</div>
+      </div>
+    );
+  }
+
+  // 에러 상태 표시
+  if (error) {
+    return (
+      <div className="alert alert-danger">
+        <h4>데이터 로딩 오류</h4>
+        <p>로봇 데이터를 불러오는 중 오류가 발생했습니다: {error}</p>
+        <p>IoT 스테이션 데이터로 대체합니다.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
+      {robots.length > 0 && (
+        <div className="alert alert-success mb-3">
+          <i className="ti ti-database me-2"></i>
+          데이터베이스에서 {robots.length}개의 로봇 데이터를 불러왔습니다.
+        </div>
+      )}
 
       <div className="table-responsive">
         <table className="table table-vcenter table-hover">
@@ -162,8 +279,8 @@ const RobotTable = ({ stationsData = [], lastUpdated }) => {
             </tr>
           </thead>
           <tbody>
-            {robots.length > 0 ? (
-              robots.map((robot) => (
+            {displayRobots.length > 0 ? (
+              displayRobots.map((robot) => (
                 <tr key={robot.id}>
                   <th className="text-primary">{robot.id}</th>
                   <td>
@@ -176,7 +293,7 @@ const RobotTable = ({ stationsData = [], lastUpdated }) => {
                     <span className="badge bg-light text-dark">{robot.location}</span>
                   </td>
                   <td>
-                    <span className={`badge ${getStatusColor(robot.status)}`}>
+                    <span className={`badge ${robot.statusColor || getStatusColor(robot.status)}`}>
                       {robot.status}
                     </span>
                   </td>
@@ -243,39 +360,39 @@ const RobotTable = ({ stationsData = [], lastUpdated }) => {
           <div className="col-md-2">
             <div className="text-muted small">가동 중</div>
             <div className="h5 text-success">
-              {robots.filter(r => r.status === '가동중').length}대
+              {displayRobots.filter(r => r.status === '가동중' || r.status === '작동중').length}대
             </div>
           </div>
           <div className="col-md-2">
             <div className="text-muted small">대기 중</div>
             <div className="h5 text-warning">
-              {robots.filter(r => r.status === '대기중').length}대
+              {displayRobots.filter(r => r.status === '대기중').length}대
             </div>
           </div>
           <div className="col-md-2">
             <div className="text-muted small">평균 가동률</div>
             <div className="h5 text-primary">
-              {robots.length > 0 ? (
-                (robots.reduce((sum, r) => sum + parseFloat(r.utilization), 0) / robots.length).toFixed(1)
+              {displayRobots.length > 0 ? (
+                (displayRobots.reduce((sum, r) => sum + parseFloat(r.utilization), 0) / displayRobots.length).toFixed(1)
               ) : 0}%
             </div>
           </div>
           <div className="col-md-2">
             <div className="text-muted small">알람 발생</div>
             <div className="h5 text-danger">
-              {robots.filter(r => r.alarm !== '정상').length}건
+              {displayRobots.filter(r => r.alarm !== '정상').length}건
             </div>
           </div>
           <div className="col-md-2">
             <div className="text-muted small">온라인</div>
             <div className="h5 text-success">
-              {robots.filter(r => r.connection === '온라인').length}대
+              {displayRobots.filter(r => r.connection === '온라인').length}대
             </div>
           </div>
           <div className="col-md-2">
             <div className="text-muted small">총 작업량</div>
             <div className="h5 text-info">
-              {robots.reduce((sum, r) => sum + parseInt(r.workCount), 0).toLocaleString()}건
+              {displayRobots.reduce((sum, r) => sum + parseInt(r.workCount), 0).toLocaleString()}건
             </div>
           </div>
         </div>

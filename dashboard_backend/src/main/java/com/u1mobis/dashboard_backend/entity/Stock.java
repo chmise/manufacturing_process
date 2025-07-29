@@ -34,6 +34,10 @@ public class Stock {
     @Column(name = "car_model")
     private String carModel;
 
+    // ✅ 회사 ID 필드 추가 (멀티테넌트 지원)
+    @Column(name = "company_id")
+    private Long companyId;
+
     // 비즈니스 로직용 생성자
     public Stock(String stockName, int currentStock, int safetyStock) {
         this.stockName = stockName;
