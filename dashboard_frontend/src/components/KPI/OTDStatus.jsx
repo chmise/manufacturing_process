@@ -14,12 +14,13 @@ const OTDStatus = ({ otd = 92.5, otdData = null }) => {
         return
       }
 
-      const otdValue = parseFloat(otd);
+      // 안전한 값 검증 및 변환
+      const otdValue = isNaN(parseFloat(otd)) || parseFloat(otd) < 0 ? 0 : parseFloat(otd);
       const delayed = 100 - otdValue;
 
       // OTD 성과 구간별 색상 적용
       const gradeInfo = getKPIColor(otdValue, 'otd');
-      console.log('OTD Value:', otdValue, 'Grade Info:', gradeInfo);
+      console.log('OTD Value:', otdValue, 'Grade Info:', gradeInfo, 'Original otd:', otd);
 
       const options = {
         chart: {
@@ -51,7 +52,7 @@ const OTDStatus = ({ otd = 92.5, otdData = null }) => {
                   fontWeight: 600,
                   label: 'OTD',
                   formatter: function () {
-                    return otdValue.toFixed(1) + '%';
+                    return (isNaN(otdValue) ? 0 : otdValue).toFixed(1) + '%';
                   }
                 }
               }

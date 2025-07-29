@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiService } from '../service/apiService';
 
 // 웹소켓 라이브러리를 동적으로 로드하여 에러 방지
 let SockJS, Stomp;
@@ -157,12 +158,45 @@ const useWebSocket = (companyName, userId) => {
     setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== alertId));
   };
 
-  const clearAlertHistory = () => {
-    setAlertHistory([]);
+  const clearAlertHistory = async () => {
     try {
+      // 백엔드에서 모든 알림 삭제
+      await apiService.alerts.deleteAllAlerts(companyName);
+      
+      // 로컬 상태 및 localStorage 삭제
+      setAlertHistory([]);
       localStorage.removeItem(`alertHistory_${companyName}`);
+      
+      console.log('모든 알림이 성공적으로 삭제되었습니다.');
     } catch (error) {
-      console.error('알림 이력 삭제 실패:', error);
+      console.error('전체 알림 삭제 실패:', error);
+      // 백엔드 삭제 실패 시에도 로컬은 삭제
+      setAlertHistory([]);
+      localStorage.removeItem(`alertHistory_${companyName}`);
+    }
+  };
+
+  const removeIndividualAlert = async (alertId) => {
+    try {
+      // 백엔드에서 개별 알림 삭제
+      await apiService.alerts.deleteAlert(alertId, companyName);
+      
+      // 로컬 상태에서 삭제
+      setAlertHistory(prevHistory => 
+        prevHistory.filter(alert => (alert.id || alert.alertId) !== alertId)
+      );
+      
+      // localStorage 업데이트
+      const updatedHistory = alertHistory.filter(alert => (alert.id || alert.alertId) !== alertId);
+      localStorage.setItem(`alertHistory_${companyName}`, JSON.stringify(updatedHistory));
+      
+      console.log('개별 알림이 성공적으로 삭제되었습니다:', alertId);
+    } catch (error) {
+      console.error('개별 알림 삭제 실패:', error);
+      // 백엔드 삭제 실패 시에도 로컬은 삭제 (UX 향상)
+      setAlertHistory(prevHistory => 
+        prevHistory.filter(alert => (alert.id || alert.alertId) !== alertId)
+      );
     }
   };
 
@@ -172,7 +206,8 @@ const useWebSocket = (companyName, userId) => {
     alertHistory,
     realtimeData,
     removeAlert,
-    clearAlertHistory
+    clearAlertHistory,
+    removeIndividualAlert
   };
 };
 

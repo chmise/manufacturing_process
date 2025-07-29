@@ -20,7 +20,7 @@ const Layout = ({ children }) => {
   const currentCompany = getCompanyNameFromUrl() || user?.companyName;
   
   // WebSocket 연결 및 알림 관리
-  const { alerts, alertHistory, removeAlert, clearAlertHistory } = useWebSocket(
+  const { alerts, alertHistory, removeAlert, clearAlertHistory, removeIndividualAlert } = useWebSocket(
     currentCompany, 
     user?.userId || 'anonymous'
   );
@@ -153,6 +153,7 @@ const Layout = ({ children }) => {
               <AlertHistory 
                 alertHistory={alertHistory}
                 clearHistory={clearAlertHistory}
+                removeIndividualAlert={removeIndividualAlert}
               />
             )}
             <div className="nav-item dropdown">

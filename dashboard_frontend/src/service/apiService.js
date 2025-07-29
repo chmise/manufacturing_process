@@ -213,9 +213,9 @@ class AuthenticatedHttpClient {
   }
 
   // 인증된 DELETE 요청
-  async delete(endpoint) {
+  async delete(endpoint, companyName = null) {
     const headers = await this.getAuthHeaders();
-    const url = getCompanyApiUrl(endpoint);
+    const url = getCompanyApiUrl(endpoint, companyName);
     const response = await fetch(url, {
       method: 'DELETE',
       headers
@@ -350,6 +350,13 @@ export const apiService = {
       httpClient.post('/click/object', { objectType, objectId }),
     getRobotStatus: (robotId) => httpClient.get(`/click/robot/${robotId}`),
     getStationInfo: (stationId) => httpClient.get(`/click/station/${stationId}`)
+  },
+
+  // 알림 관리 API
+  alerts: {
+    getAlerts: (companyName = null) => httpClient.get('/alerts', companyName),
+    deleteAlert: (alertId, companyName = null) => httpClient.delete(`/alerts/${alertId}`, companyName),
+    deleteAllAlerts: (companyName = null) => httpClient.delete('/alerts', companyName)
   },
 
   // 범용 HTTP 메서드 (인증 포함)
