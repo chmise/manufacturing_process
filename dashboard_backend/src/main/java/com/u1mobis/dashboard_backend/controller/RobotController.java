@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/{companyName}")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Slf4j
@@ -19,15 +19,16 @@ public class RobotController {
     private final RobotService robotService;
     
     @GetMapping("/click/robot/{robotId}")
-    public ResponseEntity<RobotDto> getRobotData(@PathVariable String robotId) {
-        log.info("로봇 데이터 요청: {}", robotId);
-        RobotDto robot = robotService.getRobotData(robotId);
+    public ResponseEntity<RobotDto> getRobotData(@PathVariable String companyName, @PathVariable String robotId) {
+        log.info("로봇 데이터 요청 - 회사: {}, 로봇ID: {}", companyName, robotId);
+        RobotDto robot = robotService.getRobotDataByCompany(companyName, robotId);
         return ResponseEntity.ok(robot);
     }
     
     @GetMapping("/robots")
-    public ResponseEntity<List<RobotDto>> getAllRobots() {
-        List<RobotDto> robots = robotService.getAllRobots();
+    public ResponseEntity<List<RobotDto>> getAllRobots(@PathVariable String companyName) {
+        log.info("회사별 로봇 목록 요청 - 회사: {}", companyName);
+        List<RobotDto> robots = robotService.getRobotsByCompanyName(companyName);
         return ResponseEntity.ok(robots);
     }
     
