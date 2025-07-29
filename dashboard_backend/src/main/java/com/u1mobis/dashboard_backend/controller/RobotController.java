@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/{companyName}")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Slf4j
 public class RobotController {
@@ -25,9 +25,8 @@ public class RobotController {
     }
     
     @GetMapping("/robots")
-    public ResponseEntity<List<RobotDto>> getAllRobots(@PathVariable String companyName) {
-        log.info("회사별 로봇 목록 요청 - 회사: {}", companyName);
-        List<RobotDto> robots = robotService.getRobotsByCompanyName(companyName);
+    public ResponseEntity<List<RobotDto>> getAllRobots() {
+        List<RobotDto> robots = robotService.getAllRobots();
         return ResponseEntity.ok(robots);
     }
     

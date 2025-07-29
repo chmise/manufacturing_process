@@ -63,12 +63,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/*/conveyor/**").permitAll()
                 .requestMatchers("/api/*/stock/**").permitAll()
                 .requestMatchers("/api/*/click/**").permitAll()
-                // 로봇 API는 인증 필요
-                .requestMatchers("/api/*/robots").authenticated()
-                .requestMatchers("/api/*/click/robot/**").authenticated()
-                // 모든 회사별 API 경로 허용 (가장 마지막에)
-                .requestMatchers("/api/*/**").permitAll()
-
                 .requestMatchers("/api/unity/**").permitAll() // Unity 데이터는 공개
                 // 시뮬레이터는 인증 필요 (더 구체적인 경로를 먼저)
                 .requestMatchers("/api/simulator/**").authenticated()
