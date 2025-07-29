@@ -7,9 +7,9 @@ import HourlyProduction from './KPI/HourlyProduction';
 import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
 import InventoryStatus from './Inventory/InventoryTable';
-import AlertToast from './Alert/AlertToast';
+// import AlertToast from './Alert/AlertToast'; // Layout에서 처리
 import apiService from '../service/apiService';
-import useWebSocket from '../hooks/useWebSocket';
+// import useWebSocket from '../hooks/useWebSocket'; // Layout에서 관리
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -22,10 +22,35 @@ const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [companyInfo, setCompanyInfo] = useState(null);
 
+  // URL에서 회사명 추출 함수
+  const getCompanyNameFromUrl = () => {
+    const path = window.location.pathname;
+    const segments = path.split('/').filter(Boolean);
+    // /{company}/dashboard 형태에서 company 추출
+    return segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'register' ? segments[0] : null;
+  };
+
   // 현재 로그인된 사용자 정보 로드
   useEffect(() => {
     const loadUserInfo = () => {
       try {
+        // URL에서 회사명 우선 추출
+        const urlCompanyName = getCompanyNameFromUrl();
+        console.log('URL에서 추출된 회사명:', urlCompanyName);
+        
+        if (urlCompanyName) {
+          // URL에서 회사명을 찾은 경우
+          setCompanyInfo({
+            companyName: urlCompanyName,
+            companyId: null // URL에서는 ID를 알 수 없음
+          });
+          setUserInfo({
+            userId: 'testuser',
+            userName: '테스트사용자'
+          });
+          return;
+        }
+        
         // localStorage에서 실제 로그인된 사용자 정보 가져오기
         const storedUserData = localStorage.getItem('userData');
         const isLoggedIn = localStorage.getItem('isLoggedIn');
@@ -64,29 +89,27 @@ const Dashboard = () => {
     loadUserInfo();
   }, []);
 
-  // WebSocket 연결 및 알림 관리
-  const { alerts, removeAlert, realtimeData } = useWebSocket(
-    companyInfo?.companyName || '유원대학교', 
-    userInfo?.userId || 'anonymous'
-  );
+  // 알림은 Layout에서 중앙집중 관리
+  // Dashboard에서는 더 이상 알림 처리 안함
 
-  // 실시간 데이터 처리
+  // 실시간 데이터 처리 (전역 이벤트 사용)
   useEffect(() => {
-    if (realtimeData) {
-      console.log('실시간 데이터 수신:', realtimeData);
+    const handleRealtimeData = (event) => {
+      const data = event.detail;
+      console.log('실시간 데이터 수신:', data);
       
-      // 데이터 타입에 따라 처리
-      if (realtimeData.type === 'environment_update') {
-        console.log('환경 데이터 업데이트:', realtimeData.data);
+      if (data.type === 'environment_update') {
+        console.log('환경 데이터 업데이트:', data.data);
         setLastUpdated(new Date());
-        // 환경 데이터 업데이트 로직 추가 가능
-      } else if (realtimeData.type === 'kpi_update') {
-        console.log('KPI 데이터 업데이트:', realtimeData.data);
+      } else if (data.type === 'kpi_update') {
+        console.log('KPI 데이터 업데이트:', data.data);
         setLastUpdated(new Date());
-        // KPI 데이터 업데이트 로직 추가 가능
       }
-    }
-  }, [realtimeData]);
+    };
+    
+    window.addEventListener('realtimeDataUpdate', handleRealtimeData);
+    return () => window.removeEventListener('realtimeDataUpdate', handleRealtimeData);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -99,10 +122,11 @@ const Dashboard = () => {
       try {
         setConnectionStatus('connecting');
         
-        // 병렬로 모든 데이터 가져오기
+        // 병렬로 모든 데이터 가져오기 (멀티테넌트 지원)
+        const companyName = companyInfo?.companyName;
         const [dashboardData, kpiData, environmentData, conveyorData] = await Promise.all([
-          apiService.dashboard.getData(),
-          apiService.dashboard.getRealTimeKPI(),
+          apiService.dashboard.getData(companyName),
+          apiService.dashboard.getRealTimeKPI(companyName),
           apiService.environment.getCurrent(),
           apiService.production.getConveyorStatus()
         ]);
@@ -197,7 +221,7 @@ const Dashboard = () => {
                 <div className="col-sm-12">
                   <ProductionTarget 
                     current={dashboardData?.production?.today_completed || 0}
-                    target={1000}
+                    target={dashboardData?.production?.production_target || 0}
                   />
                 </div>
                 <div className="col-6">
@@ -330,8 +354,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 알림 토스트 */}
-      <AlertToast alerts={alerts} onRemove={removeAlert} />
+      {/* 알림 토스트는 Layout에서 처리 */}
     </div>
   );
 };

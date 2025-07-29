@@ -35,11 +35,26 @@ public class DashboardController {
         log.info("대시보드 데이터 요청 - 회사: {}", companyName);
         Map<String, Object> dashboard = new HashMap<>();
 
-        // 생산 현황
-        dashboard.put("production", productionService.getCurrentProductionStatus());
+        // 생산 현황 (멀티테넌트 지원 - 기본 라인 1)
+        dashboard.put("production", productionService.getCurrentProductionStatus(companyName, 1L));
 
-        // KPI 데이터
-        dashboard.put("kpi", kpiCalculationService.getRealTimeKPI());
+        // KPI 데이터 (회사별 필터링)
+        dashboard.put("kpi", kpiCalculationService.getRealTimeKPIByCompany(companyName));
+
+        return ResponseEntity.ok(dashboard);
+    }
+    
+    // 라인별 대시보드 데이터
+    @GetMapping("/dashboard/line/{lineId}")
+    public ResponseEntity<Map<String, Object>> getDashboardDataByLine(@PathVariable String companyName, @PathVariable Long lineId) {
+        log.info("라인별 대시보드 데이터 요청 - 회사: {}, 라인: {}", companyName, lineId);
+        Map<String, Object> dashboard = new HashMap<>();
+
+        // 생산 현황 (멀티테넌트 + 라인별)
+        dashboard.put("production", productionService.getCurrentProductionStatus(companyName, lineId));
+
+        // KPI 데이터 (회사별)
+        dashboard.put("kpi", kpiCalculationService.getRealTimeKPIByCompany(companyName));
 
         return ResponseEntity.ok(dashboard);
     }
@@ -48,14 +63,21 @@ public class DashboardController {
     @GetMapping("/kpi/realtime")
     public ResponseEntity<Map<String, Object>> getRealTimeKPI(@PathVariable String companyName) {
         log.info("실시간 KPI 요청 - 회사: {}", companyName);
-        return ResponseEntity.ok(kpiCalculationService.getRealTimeKPI());
+        return ResponseEntity.ok(kpiCalculationService.getRealTimeKPIByCompany(companyName));
     }
 
     // 생산 현황 조회
     @GetMapping("/production/status")
     public ResponseEntity<Map<String, Object>> getProductionStatus(@PathVariable String companyName) {
         log.info("생산 현황 요청 - 회사: {}", companyName);
-        return ResponseEntity.ok(productionService.getCurrentProductionStatus());
+        return ResponseEntity.ok(productionService.getCurrentProductionStatus(companyName, 1L));
+    }
+    
+    // 라인별 생산 현황 조회
+    @GetMapping("/production/status/line/{lineId}")
+    public ResponseEntity<Map<String, Object>> getProductionStatusByLine(@PathVariable String companyName, @PathVariable Long lineId) {
+        log.info("라인별 생산 현황 요청 - 회사: {}, 라인: {}", companyName, lineId);
+        return ResponseEntity.ok(productionService.getCurrentProductionStatus(companyName, lineId));
     }
 
     /**

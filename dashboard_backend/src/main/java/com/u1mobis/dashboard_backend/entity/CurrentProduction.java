@@ -50,4 +50,7 @@ public class CurrentProduction {
     
     @Column(name = "line_id", nullable = false)
     private Long lineId;
+    
+    @Column(name = "target_quantity")
+    private Integer targetQuantity;           // 생산 목표 수량
 }

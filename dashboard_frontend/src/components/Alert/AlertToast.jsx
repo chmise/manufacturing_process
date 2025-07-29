@@ -23,6 +23,26 @@ const AlertToast = ({ alerts, onRemove }) => {
             <circle cx="12" cy="13" r="3"/>
           </svg>
         );
+      case 'OEE_LOW':
+      case 'FTY_LOW':
+      case 'OTD_LOW':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="m19 9-5 5-4-4-3 3"/>
+            <circle cx="12" cy="12" r="1"/>
+            <path d="m12 7 2 2-2 2-2-2z"/>
+          </svg>
+        );
+      case 'OEE_EXCELLENT':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="m4 15 4-6 4 2 5-4"/>
+            <circle cx="18" cy="9" r="1"/>
+            <path d="m18 6 2 2-2 2-2-2z"/>
+          </svg>
+        );
       default:
         return (
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

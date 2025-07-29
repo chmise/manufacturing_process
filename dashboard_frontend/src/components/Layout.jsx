@@ -1,11 +1,29 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { apiService } from '../service/apiService'
+import AlertHistory from './Alert/AlertHistory'
+import AlertToast from './Alert/AlertToast'
+import useWebSocket from '../hooks/useWebSocket'
 
 const Layout = ({ children }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  
+  // URL에서 회사명 추출
+  const getCompanyNameFromUrl = () => {
+    const path = window.location.pathname;
+    const segments = path.split('/').filter(Boolean);
+    return segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'register' ? segments[0] : null;
+  };
+  
+  const currentCompany = getCompanyNameFromUrl() || user?.companyName;
+  
+  // WebSocket 연결 및 알림 관리
+  const { alerts, alertHistory, removeAlert, clearAlertHistory } = useWebSocket(
+    currentCompany, 
+    user?.userId || 'anonymous'
+  );
 
   // 회사명을 포함한 URL 생성
   const getCompanyUrl = (path) => {
@@ -110,6 +128,13 @@ const Layout = ({ children }) => {
           </div>
 
           <div className="navbar-nav flex-row order-md-last ms-auto">
+            {/* 알림 이력 */}
+            {currentCompany && (
+              <AlertHistory 
+                alertHistory={alertHistory}
+                clearHistory={clearAlertHistory}
+              />
+            )}
             <div className="nav-item dropdown">
               <a href="#" className="nav-link d-flex lh-1 text-reset" data-bs-toggle="dropdown" aria-label="Open user menu">
                 <span className="avatar avatar-sm">
@@ -144,6 +169,9 @@ const Layout = ({ children }) => {
           </div>
         </div>
       </div>
+      
+      {/* 실시간 토스트 알림 */}
+      <AlertToast alerts={alerts} onRemove={removeAlert} />
     </div>
   )
 }
