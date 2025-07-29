@@ -3,7 +3,9 @@ package com.u1mobis.dashboard_backend.service;
 import com.u1mobis.dashboard_backend.dto.RobotDto;
 import com.u1mobis.dashboard_backend.dto.MqttRobotDataDto;
 import com.u1mobis.dashboard_backend.entity.Robot;
+import com.u1mobis.dashboard_backend.entity.Company;
 import com.u1mobis.dashboard_backend.repository.RobotRepository;
+import com.u1mobis.dashboard_backend.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -26,10 +28,33 @@ import java.util.stream.Collectors;
 public class RobotService {
     
     private final RobotRepository robotRepository;
+    private final CompanyRepository companyRepository; // CompanyRepository 추가
     
     // 생산 사이클 관리용
     private final Map<String, ScheduledFuture<?>> productionSchedulers = new ConcurrentHashMap<>();
     private final ScheduledExecutorService schedulerService = Executors.newScheduledThreadPool(10);
+
+    @Transactional(readOnly = true)
+    public RobotDto getRobotDataByCompany(String companyName, String robotId) {
+        log.info("로봇 데이터 조회 - 회사: {}, 로봇ID: {}", companyName, robotId);
+        Long companyId = companyRepository.findByCompanyName(companyName)
+                .map(Company::getCompanyId)
+                .orElseThrow(() -> new RuntimeException("회사를 찾을 수 없습니다: " + companyName));
+        Robot robot = robotRepository.findByRobotIdAndCompanyId(robotId, companyId)
+                .orElseThrow(() -> new RuntimeException("로봇을 찾을 수 없습니다: " + robotId + ", 회사: " + companyName));
+        return convertToDto(robot);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RobotDto> getRobotsByCompanyName(String companyName) {
+        log.info("회사별 로봇 목록 조회 - 회사: {}", companyName);
+        Long companyId = companyRepository.findByCompanyName(companyName)
+                .map(Company::getCompanyId)
+                .orElseThrow(() -> new RuntimeException("회사를 찾을 수 없습니다: " + companyName));
+        return robotRepository.findByCompanyId(companyId).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
 
     // ===== MQTT 데이터 처리 =====
     

@@ -417,6 +417,15 @@ export const apiService = {
     reset: (companyName = null) => httpClient.post('/simulator/reset', {}, companyName)
   },
 
+  // 로봇 관련 API
+  robot: {
+    // 특정 로봇 데이터 조회
+    getRobotData: (robotId, companyName = null) => httpClient.get(`/robots/${robotId}`, companyName),
+    
+    // 회사별 모든 로봇 데이터 조회
+    getAllRobots: (companyName = null) => httpClient.get('/robots', companyName)
+  },
+
   // Unity Twin 관련 API
   unity: {
     // Unity 실시간 데이터 조회

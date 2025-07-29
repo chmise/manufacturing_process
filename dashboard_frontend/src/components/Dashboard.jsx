@@ -6,7 +6,7 @@ import ProductionTarget from './KPI/ProductionTarget';
 import HourlyProduction from './KPI/HourlyProduction';
 import CycleTime from './KPI/CycleTime';
 import RobotTables from './Robot/RobotTables';
-import InventoryStatus from './Inventory/InventoryTable';
+import InventoryTable from './Inventory/InventoryTable';
 // import AlertToast from './Alert/AlertToast'; // Layout에서 처리
 import apiService from '../service/apiService';
 // import useWebSocket from '../hooks/useWebSocket'; // Layout에서 관리
@@ -310,7 +310,7 @@ const Dashboard = () => {
                   마지막 업데이트: {lastUpdated.toLocaleTimeString()}
                 </small>
               </div>
-              <InventoryStatus 
+              <InventoryTable 
                 dashboardData={dashboardData}
                 stationsData={stationsData}
               />
