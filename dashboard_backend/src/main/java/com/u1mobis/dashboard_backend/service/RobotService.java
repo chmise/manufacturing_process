@@ -34,7 +34,7 @@ public class RobotService {
     // ===== MQTT 데이터 처리 =====
     
     @Transactional
-    public void updateRobotFromMqtt(MqttRobotDataDto mqttData) {
+    public void updateRobotFromMqtt(String companyName, MqttRobotDataDto mqttData) {
         String robotId = mqttData.getRobotId();
         
         Optional<Robot> robotOpt = robotRepository.findById(robotId);
@@ -129,12 +129,18 @@ public class RobotService {
                 .collect(Collectors.toList());
     }
     
+    @Transactional(readOnly = true)
+    public List<RobotDto> getRobotsByCompany(Long companyId) {
+        return robotRepository.findByCompanyId(companyId).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+    
     private RobotDto convertToDto(Robot robot) {
         return RobotDto.builder()
                 .robotId(robot.getRobotId())
                 .robotName(robot.getRobotName())
                 .robotType(robot.getRobotType())
-                .stationCode(robot.getStationCode())
                 .statusText(robot.getStatusText())
                 .motorStatus(robot.getMotorStatus())
                 .ledStatus(robot.getLedStatus())
@@ -145,7 +151,7 @@ public class RobotService {
                 .powerConsumption(robot.getPowerConsumption())
                 .lastUpdate(robot.getLastUpdate())
                 .companyId(robot.getCompanyId())
-                .lineId(robot.getLineId())
+                .lineId(robot.getProductionLine() != null ? robot.getProductionLine().getLineId() : null)
                 .build();
     }
 }
