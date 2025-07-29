@@ -24,16 +24,15 @@ public class Robot {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
-    @Column(name = "line_id", nullable = false)
-    private Long lineId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "line_id", nullable = false)
+    private ProductionLine productionLine;
 
     // ===== Digital Twin 필드 추가 =====
     
     @Column(name = "robot_type")
     private String robotType;
     
-    @Column(name = "station_code")
-    private String stationCode;
     
     @Column(name = "status_text")
     private String statusText;
@@ -68,9 +67,6 @@ public class Robot {
     @JoinColumn(name = "company_id", insertable = false, updatable = false)
     private Company company;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "line_id", insertable = false, updatable = false)
-    private ProductionLine productionLine;
 
     // 기존 생성자 유지
     public Robot(Long companyId, String robotName) {

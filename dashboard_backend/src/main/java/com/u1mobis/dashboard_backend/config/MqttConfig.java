@@ -57,7 +57,7 @@ public class MqttConfig {
     @Bean
     public MessageProducer inbound() {
         MqttPahoMessageDrivenChannelAdapter adapter =
-                new MqttPahoMessageDrivenChannelAdapter(clientId, mqttClientFactory(), "robot/data");
+                new MqttPahoMessageDrivenChannelAdapter(clientId, mqttClientFactory(), "factory/+/robot");
         
         adapter.setCompletionTimeout(5000);
         adapter.setConverter(new DefaultPahoMessageConverter());
@@ -75,15 +75,35 @@ public class MqttConfig {
             @Override
             public void handleMessage(Message<?> message) throws MessagingException {
                 try {
+                    String topic = (String) message.getHeaders().get("mqtt_receivedTopic");
                     String payload = message.getPayload().toString();
-                    System.out.println("MQTT 메시지 수신: " + payload);
+                    System.out.println("MQTT 메시지 수신 - 토픽: " + topic + ", 페이로드: " + payload);
+
+                    // 토픽에서 회사명 추출: factory/{companyName}/robot
+                    String companyName = extractCompanyNameFromTopic(topic);
+                    if (companyName == null) {
+                        System.err.println("토픽에서 회사명을 추출할 수 없습니다: " + topic);
+                        return;
+                    }
 
                     MqttRobotDataDto mqttData = objectMapper.readValue(payload, MqttRobotDataDto.class);
-                    robotService.updateRobotFromMqtt(mqttData);
+                    robotService.updateRobotFromMqtt(companyName, mqttData);
 
                 } catch (Exception e) {
                     System.err.println("MQTT 메시지 처리 중 오류: " + e.getMessage());
                     e.printStackTrace();
+                }
+            }
+            
+            private String extractCompanyNameFromTopic(String topic) {
+                try {
+                    String[] parts = topic.split("/");
+                    if (parts.length >= 2 && "factory".equals(parts[0])) {
+                        return parts[1];
+                    }
+                    return null;
+                } catch (Exception e) {
+                    return null;
                 }
             }
         };

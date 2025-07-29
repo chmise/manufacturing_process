@@ -85,7 +85,7 @@ public class UnityTwinController {
                         "robotId", robot.getRobotId(),
                         "robotName", robot.getRobotName(),
                         "companyId", robot.getCompanyId(),
-                        "lineId", robot.getLineId(),
+                        "lineId", robot.getProductionLine() != null ? robot.getProductionLine().getLineId() : null,
                         "status", "ACTIVE", // 실제로는 별도 상태 테이블에서 조회
                         "currentTask", determineCurrentTask(robot.getRobotId()),
                         "batteryLevel", 95 // 실제로는 IoT 센서 데이터에서 조회
