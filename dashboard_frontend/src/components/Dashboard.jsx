@@ -260,9 +260,9 @@ const Dashboard = () => {
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3 className="card-title mb-0">실시간 스테이션 모니터링</h3>
-                <span className="badge bg-primary">
-                  {stationsData.length}개 스테이션 운영 중
-                </span>
+                <div className="text-muted small">
+                  마지막 업데이트: {lastUpdated ? lastUpdated.toLocaleTimeString() : '연결 대기 중'}
+                </div>
               </div>
               <RobotTables 
                 stationsData={stationsData}

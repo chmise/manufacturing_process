@@ -202,7 +202,7 @@ const Login = ({ onLogin }) => {
                         navigate("/company-register"); 
                       }}
                     >
-                      회사 등록
+                      회사등록
                     </a>
                   </div>
                 </div>
