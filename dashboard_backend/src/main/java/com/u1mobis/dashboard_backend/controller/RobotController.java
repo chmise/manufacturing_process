@@ -12,13 +12,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/{companyName}")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class RobotController {
     
     private final RobotService robotService;
     
-    @GetMapping("/click/robot/{robotId}")
+    @GetMapping("/robots/{robotId}")
     public ResponseEntity<RobotDto> getRobotData(@PathVariable String companyName, @PathVariable String robotId) {
         log.info("로봇 데이터 요청 - 회사: {}, 로봇ID: {}", companyName, robotId);
         RobotDto robot = robotService.getRobotDataByCompany(companyName, robotId);
