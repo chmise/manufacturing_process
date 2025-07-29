@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class RobotDto {
@@ -26,4 +26,10 @@ public class RobotDto {
     private LocalDateTime lastUpdate;
     private Long companyId;
     private Long lineId;
+    
+    // 계산된 값들 (백엔드에서 계산)
+    private Double health;           // 건강도 (0-100)
+    private Double utilization;      // 가동률 (0-100)
+    private String alarmStatus;      // 알람 상태 (정상/경고/심각)
+    private String connectionStatus; // 통신 상태 (온라인/오프라인)
 }
