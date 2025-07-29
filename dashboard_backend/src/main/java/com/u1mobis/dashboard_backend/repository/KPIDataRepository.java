@@ -17,6 +17,12 @@ public interface KPIDataRepository extends JpaRepository<KPIData, Long> {
     // 최신 KPI 데이터 조회
     Optional<KPIData> findTopByOrderByTimestampDesc();
     
+    // 회사별 최신 KPI 데이터 조회
+    Optional<KPIData> findTopByCompany_CompanyNameOrderByTimestampDesc(String companyName);
+    
+    // 회사+라인별 최신 KPI 데이터 조회
+    Optional<KPIData> findTopByCompany_CompanyNameAndLineIdOrderByTimestampDesc(String companyName, Long lineId);
+    
     // 특정 기간 KPI 데이터 조회
     List<KPIData> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime startTime, LocalDateTime endTime);
     

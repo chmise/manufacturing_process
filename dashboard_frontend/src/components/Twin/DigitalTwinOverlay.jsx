@@ -5,12 +5,61 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [currentPosition, setCurrentPosition] = useState(position);
 
   useEffect(() => {
     if (isOpen && clickData) {
       fetchData();
     }
   }, [isOpen, clickData, clickType]);
+
+  useEffect(() => {
+    setCurrentPosition(position);
+  }, [position]);
+
+  // 마우스 드래그 이벤트 핸들러
+  const handleMouseDown = (e) => {
+    if (e.target.closest('.drag-handle')) {
+      setIsDragging(true);
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      setCurrentPosition({
+        x: e.clientX - dragOffset.x + (e.currentTarget.offsetWidth / 2),
+        y: e.clientY - dragOffset.y + 20
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 전역 마우스 이벤트 리스너
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDragging, dragOffset]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -56,8 +105,8 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
   // 팝오버 위치 계산 - 반투명 글래스모피즘 스타일 적용
   const popoverStyle = {
     position: 'fixed',
-    left: position.x,
-    top: position.y - 20,
+    left: currentPosition.x,
+    top: currentPosition.y - 20,
     transform: 'translateX(-50%)',
     background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.15), rgba(0, 100, 200, 0.25))',
     backdropFilter: 'blur(10px)',
@@ -66,8 +115,8 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
     borderRadius: '12px',
     padding: '16px',
     minWidth: '320px',
-    maxWidth: '450px',
-    maxHeight: '400px',
+    maxWidth: '500px',
+    maxHeight: '500px',
     overflow: 'auto',
     boxShadow: `
       0 8px 32px rgba(0, 150, 255, 0.2),
@@ -78,11 +127,15 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
     fontSize: '14px',
     color: '#ffffff',
     textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-    animation: 'overlaySlideIn 0.4s ease-out'
+    animation: isDragging ? 'none' : 'overlaySlideIn 0.4s ease-out',
+    cursor: isDragging ? 'grabbing' : 'default'
   };
 
   return (
-    <div style={popoverStyle}>
+    <div 
+      style={popoverStyle}
+      onMouseDown={handleMouseDown}
+    >
       {/* 네온 글로우 효과 */}
       <div
         style={{
@@ -124,14 +177,19 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
       }} />
       
       {/* 헤더 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '16px',
-        paddingBottom: '12px',
-        borderBottom: '1px solid rgba(0, 150, 255, 0.3)'
-      }}>
+      <div 
+        className="drag-handle"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+          paddingBottom: '12px',
+          borderBottom: '1px solid rgba(0, 150, 255, 0.3)',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+      >
         <h3 style={{
           margin: 0,
           color: '#ffffff',
@@ -141,8 +199,13 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
           background: 'linear-gradient(45deg, #ffffff, #a8d8ff)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
+          backgroundClip: 'text',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
+          <span style={{ cursor: isDragging ? 'grabbing' : 'grab' }}>⋮⋮</span>
           {getTitle(clickType)}
         </h3>
         <button
@@ -162,8 +225,10 @@ const DigitalTwinOverlay = ({ isOpen, onClose, clickType, clickData, position })
             justifyContent: 'center',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            flexShrink: 0
           }}
+          onMouseDown={(e) => e.stopPropagation()} // 닫기 버튼 클릭 시 드래그 방지
           onMouseOver={(e) => {
             e.target.style.background = 'rgba(0, 150, 255, 0.4)';
             e.target.style.borderColor = 'rgba(0, 200, 255, 0.6)';
@@ -288,6 +353,38 @@ const getTitle = (clickType) => {
   }
 };
 
+// 메트릭 카드 컴포넌트
+const MetricCard = ({ icon, label, value, unit, color = '#00ccff' }) => (
+  <div style={{
+    padding: '12px',
+    background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
+    borderRadius: '8px',
+    border: '1px solid rgba(0, 150, 255, 0.2)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    textAlign: 'center',
+    minWidth: '80px'
+  }}>
+    <div style={{ fontSize: '18px', marginBottom: '4px' }}>{icon}</div>
+    <div style={{ 
+      fontSize: '18px', 
+      fontWeight: 'bold', 
+      color: color,
+      textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+      marginBottom: '2px'
+    }}>
+      {value}{unit}
+    </div>
+    <div style={{ 
+      fontSize: '11px', 
+      color: '#e0f2ff',
+      textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+    }}>
+      {label}
+    </div>
+  </div>
+);
+
 // 로봇 상태 표시 컴포넌트
 const RobotStatusDisplay = ({ data }) => {
   const getStatusColor = (status) => {
@@ -297,6 +394,25 @@ const RobotStatusDisplay = ({ data }) => {
       case '점검중': return '#ff9800';
       default: return '#9e9e9e';
     }
+  };
+
+  const getQualityColor = (quality) => {
+    if (quality >= 95) return '#4CAF50';
+    if (quality >= 85) return '#ff9800';
+    return '#f44336';
+  };
+
+  const getTemperatureColor = (temp) => {
+    if (temp <= 30) return '#2196F3';
+    if (temp <= 50) return '#4CAF50';
+    if (temp <= 70) return '#ff9800';
+    return '#f44336';
+  };
+
+  const getPowerColor = (power) => {
+    if (power <= 50) return '#4CAF50';
+    if (power <= 75) return '#ff9800';
+    return '#f44336';
   };
 
   return (
@@ -313,8 +429,9 @@ const RobotStatusDisplay = ({ data }) => {
         <div style={{ 
           fontSize: '16px', 
           fontWeight: 'bold', 
-          color: '#333',
-          marginBottom: '8px'
+          color: '#ffffff',
+          marginBottom: '8px',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
         }}>
           {data.robotName}
         </div>
@@ -324,7 +441,7 @@ const RobotStatusDisplay = ({ data }) => {
         <div style={{ fontSize: '12px', color: '#e0f2ff', marginBottom: '4px', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
           타입: {data.robotType}
         </div>
-        <div style={{ fontSize: '12px', color: '#666' }}>
+        <div style={{ fontSize: '12px', color: '#e0f2ff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
           공정: {data.stationCode}
         </div>
       </div>
@@ -340,7 +457,7 @@ const RobotStatusDisplay = ({ data }) => {
       }}>
         <div style={{
           display: 'flex',
-          justifyContent: 'between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '8px'
         }}>
@@ -359,19 +476,21 @@ const RobotStatusDisplay = ({ data }) => {
         
         <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
           <div>
-            <span style={{ color: '#666' }}>모터:</span>
+            <span style={{ color: '#e0f2ff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>모터:</span>
             <span style={{ 
               marginLeft: '4px',
-              color: data.motorStatus === 1 ? '#4CAF50' : '#f44336'
+              color: data.motorStatus === 1 ? '#4CAF50' : '#f44336',
+              fontWeight: 'bold'
             }}>
               {data.motorStatus === 1 ? 'ON' : 'OFF'}
             </span>
           </div>
           <div>
-            <span style={{ color: '#666' }}>LED:</span>
+            <span style={{ color: '#e0f2ff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>LED:</span>
             <span style={{ 
               marginLeft: '4px',
-              color: data.ledStatus === 1 ? '#4CAF50' : '#f44336'
+              color: data.ledStatus === 1 ? '#4CAF50' : '#f44336',
+              fontWeight: 'bold'
             }}>
               {data.ledStatus === 1 ? 'ON' : 'OFF'}
             </span>
@@ -379,14 +498,104 @@ const RobotStatusDisplay = ({ data }) => {
         </div>
       </div>
 
+      {/* 생산 메트릭 */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '8px'
+      }}>
+        <MetricCard
+          icon="⏱️"
+          label="사이클타임"
+          value={data.cycleTime || 0}
+          unit="초"
+          color="#00ccff"
+        />
+        <MetricCard
+          icon="📊"
+          label="제작갯수"
+          value={data.productionCount || 0}
+          unit="개"
+          color="#4CAF50"
+        />
+        <MetricCard
+          icon="✅"
+          label="품질"
+          value={data.quality || 0}
+          unit="%"
+          color={getQualityColor(data.quality || 0)}
+        />
+        <MetricCard
+          icon="🌡️"
+          label="온도"
+          value={data.temperature || 0}
+          unit="°C"
+          color={getTemperatureColor(data.temperature || 0)}
+        />
+      </div>
+
+      {/* 전력량 정보 */}
+      <div style={{
+        padding: '12px',
+        background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
+        borderRadius: '8px',
+        border: '1px solid rgba(0, 150, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '8px'
+        }}>
+          <span style={{ 
+            fontWeight: 'bold', 
+            color: '#ffffff', 
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            ⚡ 전력 소비량
+          </span>
+          <span style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: getPowerColor(data.powerConsumption || 0),
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
+            {data.powerConsumption || 0} kW
+          </span>
+        </div>
+        
+        {/* 전력 사용량 바 */}
+        <div style={{
+          width: '100%',
+          height: '6px',
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: '3px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            height: '100%',
+            width: `${Math.min((data.powerConsumption || 0) / 100 * 100, 100)}%`,
+            backgroundColor: getPowerColor(data.powerConsumption || 0),
+            borderRadius: '3px',
+            transition: 'width 0.3s ease'
+          }} />
+        </div>
+      </div>
+
       {/* 마지막 업데이트 */}
       {data.lastUpdate && (
         <div style={{
           fontSize: '11px',
-          color: '#999',
+          color: '#b0d4ff',
           textAlign: 'center',
           paddingTop: '8px',
-          borderTop: '1px solid #f0f0f0'
+          borderTop: '1px solid rgba(0, 150, 255, 0.3)',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
         }}>
           마지막 업데이트: {new Date(data.lastUpdate).toLocaleString('ko-KR')}
         </div>
@@ -402,40 +611,106 @@ const StationStatusDisplay = ({ data }) => {
       {/* 공정 정보 */}
       <div style={{
         padding: '12px',
-        backgroundColor: '#f8f9fa',
+        background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
         borderRadius: '8px',
-        border: '1px solid #e9ecef'
+        border: '1px solid rgba(0, 150, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
       }}>
         <div style={{ 
           fontSize: '16px', 
           fontWeight: 'bold', 
-          color: '#333',
-          marginBottom: '4px'
+          color: '#ffffff',
+          marginBottom: '4px',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
         }}>
           공정 코드: {data.stationCode}
         </div>
+        <div style={{ 
+          fontSize: '12px', 
+          color: '#e0f2ff',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+        }}>
+          공정명: {data.stationName || '알 수 없음'}
+        </div>
       </div>
+
+      {/* 공정 통계 */}
+      {(data.totalCycleTime || data.totalProduction || data.avgQuality || data.avgTemperature || data.totalPower) && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '8px'
+        }}>
+          <MetricCard
+            icon="⏱️"
+            label="평균 사이클"
+            value={data.avgCycleTime || 0}
+            unit="초"
+            color="#00ccff"
+          />
+          <MetricCard
+            icon="📊"
+            label="총 생산량"
+            value={data.totalProduction || 0}
+            unit="개"
+            color="#4CAF50"
+          />
+          <MetricCard
+            icon="✅"
+            label="평균 품질"
+            value={data.avgQuality || 0}
+            unit="%"
+            color="#ff9800"
+          />
+          <MetricCard
+            icon="⚡"
+            label="총 전력량"
+            value={data.totalPower || 0}
+            unit="kW"
+            color="#f44336"
+          />
+        </div>
+      )}
 
       {/* 로봇 목록 */}
       {data.robots && data.robots.length > 0 && (
         <div>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '8px', 
+            color: '#ffffff',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
             로봇 상태 ({data.robots.length}개)
           </div>
           {data.robots.map((robot, index) => (
             <div key={index} style={{
               padding: '8px',
-              backgroundColor: '#fff',
+              background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.05), rgba(0, 100, 200, 0.08))',
               borderRadius: '6px',
-              border: '1px solid #e9ecef',
-              marginBottom: '6px'
+              border: '1px solid rgba(0, 150, 255, 0.2)',
+              marginBottom: '6px',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)'
             }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold',
+                color: '#ffffff',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+              }}>
                 로봇 #{robot.robotId}
               </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#e0f2ff',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+              }}>
                 모터: {robot.motorStatus === 1 ? 'ON' : 'OFF'} | 
-                LED: {robot.ledStatus === 1 ? 'ON' : 'OFF'}
+                LED: {robot.ledStatus === 1 ? 'ON' : 'OFF'} |
+                제작: {robot.productionCount || 0}개 |
+                품질: {robot.quality || 0}%
               </div>
             </div>
           ))}
@@ -445,22 +720,38 @@ const StationStatusDisplay = ({ data }) => {
       {/* 제품 목록 */}
       {data.products && data.products.length > 0 && (
         <div>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '8px', 
+            color: '#ffffff',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
             제품 현황 ({data.products.length}개)
           </div>
           {data.products.map((product, index) => (
             <div key={index} style={{
               padding: '8px',
-              backgroundColor: '#fff',
+              background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.05), rgba(0, 100, 200, 0.08))',
               borderRadius: '6px',
-              border: '1px solid #e9ecef',
-              marginBottom: '6px'
+              border: '1px solid rgba(0, 150, 255, 0.2)',
+              marginBottom: '6px',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)'
             }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold',
+                color: '#ffffff',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+              }}>
                 제품 ID: {product.productId}
               </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>
-                상태: {product.status}
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#e0f2ff',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
+              }}>
+                상태: {product.status} | 품질: {product.quality || 0}%
               </div>
             </div>
           ))}
@@ -482,20 +773,29 @@ const ProductStatusDisplay = ({ data }) => {
     }
   };
 
+  const getQualityColor = (quality) => {
+    if (quality >= 95) return '#4CAF50';
+    if (quality >= 85) return '#ff9800';
+    return '#f44336';
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {/* 제품 기본 정보 */}
       <div style={{
         padding: '12px',
-        backgroundColor: '#f8f9fa',
+        background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
         borderRadius: '8px',
-        border: '1px solid #e9ecef'
+        border: '1px solid rgba(0, 150, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
       }}>
         <div style={{ 
           fontSize: '16px', 
           fontWeight: 'bold', 
-          color: '#333',
-          marginBottom: '8px'
+          color: '#ffffff',
+          marginBottom: '8px',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
         }}>
           제품 ID: {data.productId}
         </div>
@@ -507,9 +807,11 @@ const ProductStatusDisplay = ({ data }) => {
       {/* 상태 정보 */}
       <div style={{
         padding: '12px',
-        backgroundColor: '#fff',
+        background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
         borderRadius: '8px',
-        border: '1px solid #e9ecef'
+        border: '1px solid rgba(0, 150, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
       }}>
         <div style={{
           display: 'flex',
@@ -517,7 +819,7 @@ const ProductStatusDisplay = ({ data }) => {
           alignItems: 'center',
           marginBottom: '8px'
         }}>
-          <span style={{ fontWeight: 'bold', color: '#333' }}>제품 상태:</span>
+          <span style={{ fontWeight: 'bold', color: '#ffffff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>제품 상태:</span>
           <span style={{
             padding: '4px 8px',
             borderRadius: '12px',
@@ -531,22 +833,115 @@ const ProductStatusDisplay = ({ data }) => {
         </div>
       </div>
 
+      {/* 제품 품질 및 생산 정보 */}
+      {(data.quality || data.processingTime || data.cycleTime) && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '8px'
+        }}>
+          {data.quality && (
+            <MetricCard
+              icon="✅"
+              label="품질 점수"
+              value={data.quality}
+              unit="%"
+              color={getQualityColor(data.quality)}
+            />
+          )}
+          {data.processingTime && (
+            <MetricCard
+              icon="⏱️"
+              label="가공 시간"
+              value={data.processingTime}
+              unit="분"
+              color="#00ccff"
+            />
+          )}
+          {data.cycleTime && (
+            <MetricCard
+              icon="🔄"
+              label="사이클타임"
+              value={data.cycleTime}
+              unit="초"
+              color="#4CAF50"
+            />
+          )}
+          {data.defectCount !== undefined && (
+            <MetricCard
+              icon="⚠️"
+              label="불량 수"
+              value={data.defectCount}
+              unit="개"
+              color={data.defectCount > 0 ? "#f44336" : "#4CAF50"}
+            />
+          )}
+        </div>
+      )}
+
       {/* 위치 정보 */}
       {(data.xPosition !== null || data.yPosition !== null || data.zPosition !== null) && (
         <div style={{
           padding: '12px',
-          backgroundColor: '#fff',
+          background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
           borderRadius: '8px',
-          border: '1px solid #e9ecef'
+          border: '1px solid rgba(0, 150, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)'
         }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
-            3D 위치 좌표
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '8px', 
+            color: '#ffffff',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
+            📍 3D 위치 좌표
           </div>
           <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
-            <div>X: <span style={{ fontWeight: 'bold' }}>{data.xPosition?.toFixed(2) || 'N/A'}</span></div>
-            <div>Y: <span style={{ fontWeight: 'bold' }}>{data.yPosition?.toFixed(2) || 'N/A'}</span></div>
-            <div>Z: <span style={{ fontWeight: 'bold' }}>{data.zPosition?.toFixed(2) || 'N/A'}</span></div>
+            <div style={{ color: '#e0f2ff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+              X: <span style={{ fontWeight: 'bold', color: '#00ccff' }}>{data.xPosition?.toFixed(2) || 'N/A'}</span>
+            </div>
+            <div style={{ color: '#e0f2ff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+              Y: <span style={{ fontWeight: 'bold', color: '#00ccff' }}>{data.yPosition?.toFixed(2) || 'N/A'}</span>
+            </div>
+            <div style={{ color: '#e0f2ff', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
+              Z: <span style={{ fontWeight: 'bold', color: '#00ccff' }}>{data.zPosition?.toFixed(2) || 'N/A'}</span>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* 생산 이력 */}
+      {data.productionHistory && data.productionHistory.length > 0 && (
+        <div style={{
+          padding: '12px',
+          background: 'linear-gradient(135deg, rgba(0, 150, 255, 0.08), rgba(0, 100, 200, 0.12))',
+          borderRadius: '8px',
+          border: '1px solid rgba(0, 150, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '8px', 
+            color: '#ffffff',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
+            📋 생산 이력
+          </div>
+          {data.productionHistory.slice(0, 3).map((history, index) => (
+            <div key={index} style={{
+              fontSize: '11px',
+              color: '#e0f2ff',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+              marginBottom: '4px',
+              padding: '4px 8px',
+              background: 'rgba(0, 150, 255, 0.1)',
+              borderRadius: '4px'
+            }}>
+              {history.station} → {history.status} ({new Date(history.timestamp).toLocaleTimeString('ko-KR')})
+            </div>
+          ))}
         </div>
       )}
 
@@ -554,10 +949,11 @@ const ProductStatusDisplay = ({ data }) => {
       {data.lastUpdate && (
         <div style={{
           fontSize: '11px',
-          color: '#999',
+          color: '#b0d4ff',
           textAlign: 'center',
           paddingTop: '8px',
-          borderTop: '1px solid #f0f0f0'
+          borderTop: '1px solid rgba(0, 150, 255, 0.3)',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
         }}>
           마지막 업데이트: {new Date(data.lastUpdate).toLocaleString('ko-KR')}
         </div>

@@ -36,6 +36,23 @@ public interface ProductionCompletedRepository extends JpaRepository<ProductionC
     @Query("SELECT AVG(pc.cycleTime) FROM ProductionCompleted pc WHERE CAST(pc.timestamp AS DATE) = CURRENT_DATE")
     Double getAverageCycleTimeToday();
     
+    // 라인별 멀티테넌트 지원 쿼리들
+    // 오늘 완료된 제품 수 조회 (라인별)
+    @Query("SELECT COUNT(pc) FROM ProductionCompleted pc WHERE CAST(pc.timestamp AS DATE) = CURRENT_DATE AND pc.lineId = :lineId")
+    Long countTodayCompletedProductsByLineId(@Param("lineId") Long lineId);
+    
+    // 오늘 양품 수 조회 (라인별)
+    @Query("SELECT COUNT(pc) FROM ProductionCompleted pc WHERE CAST(pc.timestamp AS DATE) = CURRENT_DATE AND pc.quality = 'PASS' AND pc.lineId = :lineId")
+    Long countTodayGoodProductsByLineId(@Param("lineId") Long lineId);
+    
+    // 오늘 평균 사이클 타임 (라인별)
+    @Query("SELECT AVG(pc.cycleTime) FROM ProductionCompleted pc WHERE CAST(pc.timestamp AS DATE) = CURRENT_DATE AND pc.lineId = :lineId")
+    Double getAverageCycleTimeTodayByLineId(@Param("lineId") Long lineId);
+    
+    // 지난 1시간 내 완료된 제품 수 (라인별)
+    @Query("SELECT COUNT(pc) FROM ProductionCompleted pc WHERE pc.timestamp >= :oneHourAgo AND pc.lineId = :lineId")
+    Long countCompletedInLastHourByLineId(@Param("oneHourAgo") LocalDateTime oneHourAgo, @Param("lineId") Long lineId);
+    
     // 다른 기본 메서드들
     List<ProductionCompleted> findByTimestampBetween(LocalDateTime startTime, LocalDateTime endTime);
     List<ProductionCompleted> findByQuality(String quality);

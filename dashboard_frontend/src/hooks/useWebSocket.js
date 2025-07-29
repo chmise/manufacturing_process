@@ -24,6 +24,15 @@ const useWebSocket = (companyName, userId) => {
   const stompClient = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [alerts, setAlerts] = useState([]);
+  const [alertHistory, setAlertHistory] = useState(() => {
+    // 로컬 스토리지에서 알림 이력 로드
+    try {
+      const saved = localStorage.getItem(`alertHistory_${companyName}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [realtimeData, setRealtimeData] = useState(null);
 
   useEffect(() => {
@@ -64,6 +73,23 @@ const useWebSocket = (companyName, userId) => {
               alertWithId,
               ...prevAlerts.slice(0, 4) // 최대 5개만 유지
             ]);
+
+            // 알림 이력에 추가 (최대 100개 유지)
+            setAlertHistory(prevHistory => {
+              const newHistory = [alertWithId, ...prevHistory.slice(0, 99)];
+              // 로컬 스토리지에 저장
+              try {
+                localStorage.setItem(`alertHistory_${companyName}`, JSON.stringify(newHistory));
+              } catch (error) {
+                console.error('알림 이력 저장 실패:', error);
+              }
+              return newHistory;
+            });
+            
+            // 전역 알림 이벤트 발생 (Dashboard에서 사용)
+            window.dispatchEvent(new CustomEvent('globalAlert', { 
+              detail: alertWithId 
+            }));
 
             // 5초 후 알림 자동 제거
             setTimeout(() => {
@@ -131,11 +157,22 @@ const useWebSocket = (companyName, userId) => {
     setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== alertId));
   };
 
+  const clearAlertHistory = () => {
+    setAlertHistory([]);
+    try {
+      localStorage.removeItem(`alertHistory_${companyName}`);
+    } catch (error) {
+      console.error('알림 이력 삭제 실패:', error);
+    }
+  };
+
   return {
     isConnected,
     alerts,
+    alertHistory,
     realtimeData,
-    removeAlert
+    removeAlert,
+    clearAlertHistory
   };
 };
 

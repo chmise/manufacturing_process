@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import ApexCharts from 'apexcharts'
+import { getKPIColor } from '../../utils/kpiColors'
 
 const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
   const chartRef = useRef(null)
@@ -16,15 +17,9 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
       const oeeValue = parseFloat(oee);
       const remaining = 100 - oeeValue;
 
-      // OEE 등급 계산
-      const getOEEGrade = (value) => {
-        if (value >= 85) return { grade: '우수', color: '#28a745' };
-        if (value >= 70) return { grade: '양호', color: '#ffc107' };
-        if (value >= 60) return { grade: '보통', color: '#fd7e14' };
-        return { grade: '개선필요', color: '#dc3545' };
-      };
-
-      const gradeInfo = getOEEGrade(oeeValue);
+      // OEE 성과 구간별 색상 적용
+      const gradeInfo = getKPIColor(oeeValue, 'oee');
+      console.log('OEE Value:', oeeValue, 'Grade Info:', gradeInfo);
 
       const options = {
         chart: {
@@ -116,15 +111,21 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
     };
   }, [oee, oeeComponents]); // oee 값과 구성요소가 변경될 때마다 차트 업데이트
 
-  // OEE 등급 정보
-  const getOEEGrade = (value) => {
-    if (value >= 85) return { grade: '우수', color: 'text-success', bgColor: 'bg-success' };
-    if (value >= 70) return { grade: '양호', color: 'text-warning', bgColor: 'bg-warning' };
-    if (value >= 60) return { grade: '보통', color: 'text-info', bgColor: 'bg-info' };
-    return { grade: '개선필요', color: 'text-danger', bgColor: 'bg-danger' };
+  // OEE 성과 구간별 정보 (통일된 색상 유틸리티 사용)
+  const textGradeInfo = getKPIColor(parseFloat(oee), 'oee');
+  
+  // 텍스트 색상을 CSS 클래스로 변환
+  const getTextColorClass = (color) => {
+    const colorMap = {
+      '#28a745': 'text-success',  // 연초록
+      '#007bff': 'text-primary',  // 파랑
+      '#ffc107': 'text-warning',  // 노랑
+      '#fd7e14': 'text-warning',  // 주황 (warning으로 대체)
+      '#dc3545': 'text-danger',   // 빨강
+      '#6c757d': 'text-secondary' // 회색
+    };
+    return colorMap[color] || 'text-muted';
   };
-
-  const gradeInfo = getOEEGrade(parseFloat(oee));
 
   return (
     <div>
@@ -135,8 +136,8 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
         <div className="row text-center">
           <div className="col-6">
             <div className="text-muted small">등급</div>
-            <div className={`fw-bold ${gradeInfo.color}`}>
-              {gradeInfo.grade}
+            <div className={`fw-bold ${getTextColorClass(textGradeInfo.color)}`}>
+              {textGradeInfo.grade}
             </div>
           </div>
           <div className="col-6">
@@ -149,13 +150,16 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
         <div className="mt-2">
           <div className="progress" style={{ height: '6px' }}>
             <div 
-              className={`progress-bar ${gradeInfo.bgColor}`}
-              style={{ width: `${Math.min(parseFloat(oee), 100)}%` }}
+              className="progress-bar"
+              style={{ 
+                width: `${Math.min(parseFloat(oee), 100)}%`,
+                backgroundColor: textGradeInfo.color
+              }}
             ></div>
           </div>
           <div className="d-flex justify-content-between mt-1">
             <small className="text-muted">0%</small>
-            <small className={gradeInfo.color}>{parseFloat(oee).toFixed(1)}%</small>
+            <small className={getTextColorClass(textGradeInfo.color)}>{parseFloat(oee).toFixed(1)}%</small>
             <small className="text-muted">100%</small>
           </div>
         </div>
