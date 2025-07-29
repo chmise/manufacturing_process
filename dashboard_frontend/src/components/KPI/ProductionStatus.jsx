@@ -14,12 +14,13 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
         return
       }
 
-      const oeeValue = parseFloat(oee);
+      // 안전한 값 검증 및 변환
+      const oeeValue = isNaN(parseFloat(oee)) || parseFloat(oee) < 0 ? 0 : parseFloat(oee);
       const remaining = 100 - oeeValue;
 
       // OEE 성과 구간별 색상 적용
       const gradeInfo = getKPIColor(oeeValue, 'oee');
-      console.log('OEE Value:', oeeValue, 'Grade Info:', gradeInfo);
+      console.log('OEE Value:', oeeValue, 'Grade Info:', gradeInfo, 'Original oee:', oee);
 
       const options = {
         chart: {
@@ -51,7 +52,7 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
                   fontWeight: 600,
                   label: 'OEE',
                   formatter: function () {
-                    return oeeValue.toFixed(1) + '%';
+                    return (isNaN(oeeValue) ? 0 : oeeValue).toFixed(1) + '%';
                   }
                 }
               }
