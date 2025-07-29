@@ -48,6 +48,12 @@ public class EnvironmentService {
         return saveEnvironmentData(companyId, temperature, humidity, airQuality);
     }
 
+    // 환경 데이터 저장 (MQTT용) - 회사명으로 조회
+    public EnvironmentSensor saveEnvironmentData(String companyName, Double temperature, Double humidity, Integer airQuality) {
+        Long companyId = getCompanyIdByName(companyName);
+        return saveEnvironmentData(companyId, temperature, humidity, airQuality);
+    }
+
     // 현재 로그인된 사용자의 회사 ID 가져오기
     private Long getCurrentUserCompanyId() {
         try {
@@ -80,6 +86,17 @@ public class EnvironmentService {
             if (sensor.getAirQuality() > 300) {
                 log.warn("공기질 경보 (회사 ID: {}): {}", companyId, sensor.getAirQuality());
             }
+        }
+    }
+
+    // 회사명으로 회사 ID 조회
+    private Long getCompanyIdByName(String companyName) {
+        Optional<Company> company = companyRepository.findByCompanyName(companyName);
+        if (company.isPresent()) {
+            return company.get().getCompanyId();
+        } else {
+            log.warn("회사를 찾을 수 없습니다: {}", companyName);
+            throw new RuntimeException("회사를 찾을 수 없습니다: " + companyName);
         }
     }
 

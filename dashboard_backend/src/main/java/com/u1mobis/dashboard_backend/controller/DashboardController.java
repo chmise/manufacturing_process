@@ -77,7 +77,7 @@ public class DashboardController {
             Integer onTimeDeliveryCount = convertToInteger(kpiData.get("on_time_delivery_count"));
 
             KPIData result = kpiCalculationService.processKPIData(
-                    plannedTime, downtime, targetCycleTime,
+                    companyName, 1L, plannedTime, downtime, targetCycleTime,
                     goodCount, totalCount, firstTimePassCount, onTimeDeliveryCount);
 
             return ResponseEntity.ok(Map.of(
