@@ -76,6 +76,7 @@ public class ProductionService {
             .status("PROCESSING")
             .currentStation("START")
             .reworkCount(0)
+            .targetQuantity(targetQuantity)
             .build();
             
         CurrentProduction saved = currentProductionRepository.save(production);
@@ -118,17 +119,41 @@ public class ProductionService {
         return completed;
     }
     
-    // 현재 생산 현황 조회
-    public Map<String, Object> getCurrentProductionStatus() {
-        List<CurrentProduction> processing = currentProductionRepository.findByStatus("PROCESSING");
-        Long todayCompleted = productionCompletedRepository.countTodayCompletedProducts();
-        Long todayGood = productionCompletedRepository.countTodayGoodProducts();
+    // 현재 생산 현황 조회 (멀티테넌트 지원)
+    public Map<String, Object> getCurrentProductionStatus(String companyName, Long lineId) {
+        List<CurrentProduction> processing = currentProductionRepository.findByStatusAndLineId("PROCESSING", lineId);
+        Long todayCompleted = productionCompletedRepository.countTodayCompletedProductsByLineId(lineId);
+        Long todayGood = productionCompletedRepository.countTodayGoodProductsByLineId(lineId);
+        
+        // 생산 목표 계산 (오늘 시작된 생산들의 목표량 합계)
+        Integer productionTarget = currentProductionRepository.getTodayProductionTargetByLineId(lineId);
+        
+        // 시간당 생산율 계산
+        Double hourlyRate = calculateHourlyProductionRate(lineId);
+        
+        // 평균 사이클 타임 계산
+        Double avgCycleTime = productionCompletedRepository.getAverageCycleTimeTodayByLineId(lineId);
         
         return Map.of(
             "processing_count", processing.size(),
             "today_completed", todayCompleted,
             "today_good", todayGood,
+            "production_target", productionTarget != null ? productionTarget : 0,
+            "hourly_rate", hourlyRate != null ? hourlyRate : 0.0,
+            "cycle_time", avgCycleTime != null ? avgCycleTime : 0.0,
             "processing_products", processing
         );
+    }
+    
+    // 시간당 생산율 계산
+    private Double calculateHourlyProductionRate(Long lineId) {
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+        Long completedInLastHour = productionCompletedRepository.countCompletedInLastHourByLineId(oneHourAgo, lineId);
+        return completedInLastHour != null ? completedInLastHour.doubleValue() : 0.0;
+    }
+    
+    // 기존 메서드 유지 (하위 호환성)
+    public Map<String, Object> getCurrentProductionStatus() {
+        return getCurrentProductionStatus(null, 1L); // 기본값
     }
 }

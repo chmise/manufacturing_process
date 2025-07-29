@@ -34,6 +34,13 @@ public interface CurrentProductionRepository extends JpaRepository<CurrentProduc
     // 특정 기간 동안 시작된 제품 조회
     List<CurrentProduction> findByStartTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
     
+    // 라인별 상태 조회 (멀티테넌트)
+    List<CurrentProduction> findByStatusAndLineId(String status, Long lineId);
+    
+    // 오늘 시작된 생산의 목표량 합계 (라인별)
+    @Query("SELECT COALESCE(SUM(cp.targetQuantity), 0) FROM CurrentProduction cp WHERE CAST(cp.startTime AS DATE) = CURRENT_DATE AND cp.lineId = :lineId")
+    Integer getTodayProductionTargetByLineId(@Param("lineId") Long lineId);
+    
     // 재작업 횟수 업데이트
     @Modifying
     @Transactional

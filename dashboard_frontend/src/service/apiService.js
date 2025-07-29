@@ -153,9 +153,9 @@ class AuthenticatedHttpClient {
   }
 
   // 인증된 GET 요청
-  async get(endpoint) {
+  async get(endpoint, companyName = null) {
     const headers = await this.getAuthHeaders();
-    const url = getCompanyApiUrl(endpoint);
+    const url = getCompanyApiUrl(endpoint, companyName);
     const response = await fetch(url, {
       method: 'GET',
       headers
@@ -173,9 +173,9 @@ class AuthenticatedHttpClient {
   }
 
   // 인증된 POST 요청
-  async post(endpoint, data) {
+  async post(endpoint, data, companyName = null) {
     const headers = await this.getAuthHeaders();
-    const url = getCompanyApiUrl(endpoint);
+    const url = getCompanyApiUrl(endpoint, companyName);
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -315,9 +315,12 @@ export const apiService = {
 
   // 대시보드 API
   dashboard: {
-    getData: () => httpClient.get('/dashboard'),
-    getRealTimeKPI: () => httpClient.get('/kpi/realtime'),
-    processKPIData: (kpiData) => httpClient.post('/kpi/process', kpiData)
+    getData: (companyName = null, lineId = null) => {
+      const endpoint = lineId ? `/dashboard/line/${lineId}` : '/dashboard';
+      return httpClient.get(endpoint, companyName);
+    },
+    getRealTimeKPI: (companyName = null) => httpClient.get('/kpi/realtime', companyName),
+    processKPIData: (kpiData, companyName = null) => httpClient.post('/kpi/process', kpiData, companyName)
   },
 
   // 환경 데이터 API
@@ -328,7 +331,10 @@ export const apiService = {
 
   // 생산 관련 API
   production: {
-    getStatus: () => httpClient.get('/production/status'),
+    getStatus: (companyName = null, lineId = null) => {
+      const endpoint = lineId ? `/production/status/line/${lineId}` : '/production/status';
+      return httpClient.get(endpoint, companyName);
+    },
     getConveyorStatus: () => httpClient.get('/conveyor/status')
   },
 

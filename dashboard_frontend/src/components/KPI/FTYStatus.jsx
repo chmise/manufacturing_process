@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import ApexCharts from 'apexcharts'
+import { getKPIColor } from '../../utils/kpiColors'
 
 const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
   const chartRef = useRef(null)
@@ -16,15 +17,9 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
       const ftyValue = parseFloat(fty);
       const defective = 100 - ftyValue;
 
-      // FTY 등급 계산
-      const getFTYGrade = (value) => {
-        if (value >= 98) return { grade: '우수', color: '#28a745' };
-        if (value >= 95) return { grade: '양호', color: '#20c997' };
-        if (value >= 90) return { grade: '보통', color: '#ffc107' };
-        return { grade: '개선필요', color: '#dc3545' };
-      };
-
-      const gradeInfo = getFTYGrade(ftyValue);
+      // FTY 성과 구간별 색상 적용
+      const gradeInfo = getKPIColor(ftyValue, 'fty');
+      console.log('FTY Value:', ftyValue, 'Grade Info:', gradeInfo);
 
       const options = {
         chart: {
@@ -116,15 +111,21 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
     };
   }, [fty, ftyData]); // fty 값과 데이터가 변경될 때마다 차트 업데이트
 
-  // FTY 등급 정보
-  const getFTYGrade = (value) => {
-    if (value >= 98) return { grade: '우수', color: 'text-success', bgColor: 'bg-success' };
-    if (value >= 95) return { grade: '양호', color: 'text-info', bgColor: 'bg-info' };
-    if (value >= 90) return { grade: '보통', color: 'text-warning', bgColor: 'bg-warning' };
-    return { grade: '개선필요', color: 'text-danger', bgColor: 'bg-danger' };
+  // FTY 성과 구간별 정보 (통일된 색상 유틸리티 사용)
+  const textGradeInfo = getKPIColor(parseFloat(fty), 'fty');
+  
+  // 텍스트 색상을 CSS 클래스로 변환
+  const getTextColorClass = (color) => {
+    const colorMap = {
+      '#28a745': 'text-success',  // 연초록
+      '#007bff': 'text-primary',  // 파랑
+      '#ffc107': 'text-warning',  // 노랑
+      '#fd7e14': 'text-warning',  // 주황 (warning으로 대체)
+      '#dc3545': 'text-danger',   // 빨강
+      '#6c757d': 'text-secondary' // 회색
+    };
+    return colorMap[color] || 'text-muted';
   };
-
-  const gradeInfo = getFTYGrade(parseFloat(fty));
 
   return (
     <div>
@@ -135,8 +136,8 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
         <div className="row text-center">
           <div className="col-6">
             <div className="text-muted small">등급</div>
-            <div className={`fw-bold ${gradeInfo.color}`}>
-              {gradeInfo.grade}
+            <div className={`fw-bold ${getTextColorClass(textGradeInfo.color)}`}>
+              {textGradeInfo.grade}
             </div>
           </div>
           <div className="col-6">
@@ -149,13 +150,16 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
         <div className="mt-2">
           <div className="progress" style={{ height: '6px' }}>
             <div 
-              className={`progress-bar ${gradeInfo.bgColor}`}
-              style={{ width: `${Math.min(parseFloat(fty), 100)}%` }}
+              className="progress-bar"
+              style={{ 
+                width: `${Math.min(parseFloat(fty), 100)}%`,
+                backgroundColor: textGradeInfo.color
+              }}
             ></div>
           </div>
           <div className="d-flex justify-content-between mt-1">
             <small className="text-muted">0%</small>
-            <small className={gradeInfo.color}>{parseFloat(fty).toFixed(1)}%</small>
+            <small className={getTextColorClass(textGradeInfo.color)}>{parseFloat(fty).toFixed(1)}%</small>
             <small className="text-muted">100%</small>
           </div>
         </div>
