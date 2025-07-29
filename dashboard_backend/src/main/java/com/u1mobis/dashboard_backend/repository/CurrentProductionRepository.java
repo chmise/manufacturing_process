@@ -52,4 +52,10 @@ public interface CurrentProductionRepository extends JpaRepository<CurrentProduc
     @Transactional
     @Query("UPDATE CurrentProduction cp SET cp.currentStation = :station WHERE cp.productId = :productId")
     int updateCurrentStation(@Param("productId") String productId, @Param("station") String station);
+    
+    // 라인별 + 스테이션별 제품 조회
+    List<CurrentProduction> findByLineIdAndCurrentStation(Long lineId, String currentStation);
+    
+    // 라인별 + 상태별 제품 개수 조회
+    long countByLineIdAndStatus(Long lineId, String status);
 }

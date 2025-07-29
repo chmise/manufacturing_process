@@ -1,6 +1,7 @@
 package com.u1mobis.dashboard_backend.mqtt;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
@@ -131,23 +132,57 @@ public class MQTTMessageProcessor {
     }
     
     /**
-     * 토픽에서 회사명을 추출합니다.
-     * 토픽 형식: factory/{companyName}/...
+     * 토픽에서 회사 코드를 추출합니다.
+     * 토픽 형식: factory/{companyCode}/...
+     * companyCode를 통해 실제 회사명을 조회합니다.
      */
     private String extractCompanyNameFromTopic(String topic) {
         try {
             String[] parts = topic.split("/");
             log.info("토픽 파싱 결과: {}", String.join(", ", parts));
             if (parts.length >= 2 && "factory".equals(parts[0])) {
-                String companyName = parts[1];
-                log.info("추출된 회사명: '{}'", companyName);
-                return companyName;
+                String companyCode = parts[1];  // companyCode 추출
+                log.info("추출된 회사 코드: '{}'", companyCode);
+                
+                // companyCode로 실제 회사명 조회
+                return getCompanyNameByCode(companyCode);
             }
             log.warn("토픽 형식이 올바르지 않음: {}", topic);
             return null;
         } catch (Exception e) {
             log.error("토픽 파싱 실패: {}", topic, e);
             return null;
+        }
+    }
+    
+    /**
+     * 회사 코드로 회사명 조회
+     */
+    private String getCompanyNameByCode(String companyCode) {
+        try {
+            // Company 엔티티에서 companyCode로 조회 후 companyName 반환
+            // 실제 구현에서는 CompanyRepository 또는 CompanyService 사용
+            // 현재는 간단히 매핑 처리
+            Map<String, String> companyMapping = Map.of(
+                "hyundai", "현대자동차",
+                "samsung", "삼성전자", 
+                "lg", "LG전자",
+                "sk", "SK하이닉스",
+                "ms", "현대자동차"  // 기존 호환성 유지
+            );
+            
+            String companyName = companyMapping.get(companyCode.toLowerCase());
+            if (companyName != null) {
+                log.info("회사 코드 '{}' → 회사명 '{}'", companyCode, companyName);
+                return companyName;
+            } else {
+                log.warn("등록되지 않은 회사 코드: {}", companyCode);
+                return companyCode;  // 매핑이 없으면 코드 그대로 사용
+            }
+            
+        } catch (Exception e) {
+            log.error("회사명 조회 실패 - 코드: {}", companyCode, e);
+            return companyCode;
         }
     }
 
