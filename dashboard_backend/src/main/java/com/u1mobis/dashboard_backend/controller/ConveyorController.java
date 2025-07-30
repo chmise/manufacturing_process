@@ -22,7 +22,7 @@ public class ConveyorController {
     private final ConveyorService conveyorService;
     
     /**
-     * 현재 컨베이어 상태 조회
+     * 현재 컨베이어 상태 조회 (회사별)
      */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getCurrentStatus(@PathVariable String companyName) {

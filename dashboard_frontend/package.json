@@ -13,6 +13,7 @@
     "@stomp/stompjs": "^7.1.1",
     "apexcharts": "^4.7.0",
     "axios": "^1.11.0",
+    "mqtt": "^5.13.3",
     "react": "^19.1.0",
     "react-apexcharts": "^1.7.0",
     "react-dom": "^19.1.0",

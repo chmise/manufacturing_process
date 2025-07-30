@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/unity")
+@RequestMapping("/api/{companyName}/unity")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 @RequiredArgsConstructor
 @Slf4j
@@ -46,7 +46,7 @@ public class UnityTwinController {
      * Unity 트윈을 위한 전체 실시간 데이터
      */
     @GetMapping("/realtime-data")
-    public ResponseEntity<Map<String, Object>> getUnityRealtimeData() {
+    public ResponseEntity<Map<String, Object>> getUnityRealtimeData(@PathVariable String companyName) {
         Map<String, Object> unityData = new HashMap<>();
 
         try {
@@ -464,130 +464,57 @@ public class UnityTwinController {
      * Unity용 환경 변수 정보
      * 경로: /api/unity/environment/variables
      */
-    @GetMapping("/environment/variables")
-    public ResponseEntity<Map<String, Object>> getEnvironmentVariables() {
-        try {
-            Map<String, Object> environment = new HashMap<>();
-            
-            // 현재 환경 정보 조회
-            Map<String, Object> currentEnv = environmentService.getCurrentEnvironment();
-            
-            environment.put("factory", Map.of(
-                "temperature", currentEnv.getOrDefault("temperature", 25.0),
-                "humidity", currentEnv.getOrDefault("humidity", 45.0),
-                "airQuality", currentEnv.getOrDefault("airQuality", 85),
-                "lighting", "NORMAL",
-                "noiseLevel", 65
-            ));
-            
-            environment.put("production", Map.of(
-                "shiftStatus", "DAY_SHIFT",
-                "operatorCount", 12,
-                "maintenanceMode", false,
-                "emergencyStatus", false
-            ));
-            
-            environment.put("timestamp", System.currentTimeMillis());
-            
-            return ResponseEntity.ok(environment);
-            
-        } catch (Exception e) {
-            log.error("Unity 환경 변수 조회 실패", e);
-            return ResponseEntity.status(500).body(Map.of(
-                "error", "환경 변수 조회 실패",
-                "message", e.getMessage()
-            ));
-        }
-    }
+    // @GetMapping("/environment/variables")
 
     // ==================== Unity WebGL에서 호출하는 추가 API들 ====================
     
     /**
-     * Unity용 생산 주문 정보 (라인별) 
-     * 경로: /api/unity/production/orders/line/{lineId}
+     * Unity WebGL에서 호출하는 생산 주문 정보
      */
     @GetMapping("/production/orders/line/{lineId}")
-    public ResponseEntity<Map<String, Object>> getProductionOrdersByLine(@PathVariable Long lineId) {
+    public ResponseEntity<Map<String, Object>> getProductionOrdersByLine(
+            @PathVariable String companyName,
+            @PathVariable String lineId) {
         try {
             Map<String, Object> orders = new HashMap<>();
-            
-            // 시뮬레이터가 실행 중이면 실제 데이터, 아니면 기본 데이터
             orders.put("lineId", lineId);
-            orders.put("currentOrders", List.of(
-                Map.of(
-                    "orderId", "ORD_L" + lineId + "_001",
-                    "productType", "SEDAN",
-                    "color", "WHITE", 
-                    "quantity", 1,
-                    "status", "IN_PROGRESS",
-                    "progress", 65
-                ),
-                Map.of(
-                    "orderId", "ORD_L" + lineId + "_002",
-                    "productType", "SUV", 
-                    "color", "BLACK",
-                    "quantity", 1,
-                    "status", "QUEUED",
-                    "progress", 0
-                )
+            orders.put("orders", List.of(
+                Map.of("orderId", "ORD_001", "productType", "DOOR", "quantity", 5, "status", "IN_PROGRESS"),
+                Map.of("orderId", "ORD_002", "productType", "CHASSIS", "quantity", 3, "status", "PENDING")
             ));
-            
-            orders.put("totalOrders", 2);
-            orders.put("completedToday", 8);
             orders.put("timestamp", System.currentTimeMillis());
             
             return ResponseEntity.ok(orders);
-            
         } catch (Exception e) {
-            log.error("Unity 생산 주문 조회 실패 - 라인: {}", lineId, e);
-            return ResponseEntity.status(500).body(Map.of(
-                "error", "생산 주문 조회 실패",
-                "message", e.getMessage()
-            ));
+            log.error("생산 주문 조회 실패 - 라인: {}", lineId, e);
+            return ResponseEntity.status(500).body(Map.of("error", "생산 주문 조회 실패"));
         }
     }
     
     /**
-     * Unity용 문 신호 정보 (라인별)
-     * 경로: /api/unity/production/door/signals/line/{lineId}
+     * Unity WebGL에서 호출하는 문 신호 정보
      */
     @GetMapping("/production/door/signals/line/{lineId}")
-    public ResponseEntity<Map<String, Object>> getDoorSignalsByLine(@PathVariable Long lineId) {
+    public ResponseEntity<Map<String, Object>> getDoorSignalsByLine(
+            @PathVariable String companyName,
+            @PathVariable String lineId) {
         try {
             Map<String, Object> signals = new HashMap<>();
-            
-            // 문 조립 스테이션 신호 정보
             signals.put("lineId", lineId);
-            signals.put("doorStations", List.of(
-                Map.of(
-                    "stationId", "DOOR_L" + lineId + "_01",
-                    "status", "ACTIVE",
-                    "currentOperation", "ASSEMBLY",
-                    "doorType", "FRONT_LEFT",
-                    "signalStrength", 95,
-                    "lastSignal", System.currentTimeMillis() - 1000
-                ),
-                Map.of(
-                    "stationId", "DOOR_L" + lineId + "_02", 
-                    "status", "IDLE",
-                    "currentOperation", "WAITING",
-                    "doorType", "FRONT_RIGHT",
-                    "signalStrength", 88,
-                    "lastSignal", System.currentTimeMillis() - 5000
-                )
+            signals.put("signals", Map.of(
+                "doorOpen", true,
+                "doorClosed", false,
+                "sensorDetected", true,
+                "emergencyStop", false,
+                "cycleComplete", false
             ));
-            
-            signals.put("overallStatus", "OPERATIONAL");
             signals.put("timestamp", System.currentTimeMillis());
             
             return ResponseEntity.ok(signals);
-            
         } catch (Exception e) {
-            log.error("Unity 문 신호 조회 실패 - 라인: {}", lineId, e);
-            return ResponseEntity.status(500).body(Map.of(
-                "error", "문 신호 조회 실패", 
-                "message", e.getMessage()
-            ));
+            log.error("문 신호 조회 실패 - 라인: {}", lineId, e);
+            return ResponseEntity.status(500).body(Map.of("error", "문 신호 조회 실패"));
         }
     }
+    
 }

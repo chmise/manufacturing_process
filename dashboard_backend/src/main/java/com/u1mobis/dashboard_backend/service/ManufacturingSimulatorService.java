@@ -56,8 +56,8 @@ public class ManufacturingSimulatorService {
         public int productionCount = 0;
         public LocalDateTime startTime;
         public String companyCode;  // MQTT 토픽용 회사 코드
-        public String[] availableColors = {"RED", "BLUE", "WHITE", "BLACK", "SILVER"};
-        public String[] availableDoorColors = {"BLACK", "WHITE", "BROWN", "GRAY"};
+        public String[] availableColors = {"Black", "Gray", "Red"}; // Unity 프리팹과 정확히 일치
+        public String[] availableDoorColors = {"Black", "Gray", "Red"}; // Unity 프리팹과 일치
         public Random random = new Random();
     }
     
@@ -284,7 +284,7 @@ public class ManufacturingSimulatorService {
     private void createNewProduct(Long companyId, Long lineId, SimulationState state) {
         try {
             state.productionCount++;
-            String productId = "L" + lineId + "_PROD_" + String.format("%03d", state.productionCount);
+            String productId = "CAR_Line" + lineId + "_" + String.format("%03d", state.productionCount); // Unity 패턴과 일치
             
             // CurrentProduction 생성 (기존 서비스 활용)
             String companyName = getCompanyName(companyId);
@@ -303,12 +303,13 @@ public class ManufacturingSimulatorService {
                     .build();
                 currentProductionRepository.save(production);
                 
-                // 2. ProductDetail 생성
-                double lineOffset = lineId * 200;
+                // 2. ProductDetail 생성 - Unity 좌표계에 맞게 조정
+                double lineOffset = lineId * 20;  // Unity 스케일에 맞게 축소
                 String doorColor = state.availableDoorColors[state.random.nextInt(state.availableDoorColors.length)];
                 int workProgress = 5 + state.random.nextInt(10);  // 5-15% 시작
-                double positionX = 50.0 + state.random.nextDouble() * 100;  // 50-150
-                double positionY = lineOffset + 20.0 + state.random.nextDouble() * 60;  // 라인별 위치
+                double positionX = -10.0 + state.random.nextDouble() * 20;  // Unity 좌표계
+                double positionY = 0.5;  // 바닥에서 살짝 위
+                double positionZ = lineOffset + state.random.nextDouble() * 10;  // 라인별 Z축 위치
                 
                 ProductDetail detail = ProductDetail.builder()
                     .productId(productId)
@@ -317,7 +318,7 @@ public class ManufacturingSimulatorService {
                     .estimatedCompletion(LocalDateTime.now().plusHours(6))
                     .positionX(positionX)
                     .positionY(positionY)
-                    .positionZ(0.0)
+                    .positionZ(positionZ)  // Z축 위치 설정
                     .lineId(lineId)
                     .build();
                 productDetailRepository.save(detail);
@@ -328,7 +329,7 @@ public class ManufacturingSimulatorService {
                         production.getTargetQuantity(), production.getDueDate().toString());
                     
                     mqttPublisher.publishProductDetails(state.companyCode, lineId, productId, 
-                        production.getProductColor(), doorColor, workProgress, positionX, positionY);
+                        production.getProductColor(), doorColor, workProgress, positionX, positionZ); // Y를 Z로 변경
                 }
                 
                 log.debug("새 제품 생성 완료 - 제품 ID: {}, 라인: {}", productId, lineId);
@@ -407,9 +408,11 @@ public class ManufacturingSimulatorService {
                     Optional<ProductDetail> detailOpt = productDetailRepository.findById(product.getProductId());
                     if (detailOpt.isPresent()) {
                         ProductDetail detail = detailOpt.get();
-                        double lineOffset = state.lineId * 200;
-                        detail.setUnityPosition(250.0 + state.random.nextDouble() * 100, 
-                                              lineOffset + 20.0 + state.random.nextDouble() * 60, 0.0);
+                        double lineOffset = state.lineId * 20;  // Unity 스케일
+                        // WaterLeakTestStation으로 이동 (Unity 좌표계)
+                        detail.setUnityPosition(20.0 + state.random.nextDouble() * 10, 
+                                              0.5, 
+                                              lineOffset + state.random.nextDouble() * 10);
                         detail.updateProgress(detail.getWorkProgress() + 20 + state.random.nextInt(30));
                         productDetailRepository.save(detail);
                     }

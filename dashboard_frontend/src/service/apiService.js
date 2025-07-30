@@ -419,39 +419,38 @@ export const apiService = {
 
   // Unity Twin 관련 API
   unity: {
-    // Unity 실시간 데이터 조회
-    getRealtimeData: () => {
-      // Unity 데이터는 인증 없이도 접근 가능하도록 설정
-      return fetch(`${API_BASE_URL}/unity/realtime-data`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      });
+    // Unity 실시간 데이터 조회 (인증 없이)
+    getRealtimeData: async (companyName) => {
+      const response = await fetch(`${API_BASE_URL}/unity/realtime-data?companyName=${companyName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
     },
     
-    // 제품 위치 조회
-    getProductPosition: (productId) => 
-      fetch(`${API_BASE_URL}/unity/product/${productId}/position`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).then(response => response.json()),
+    // 제품 위치 조회 (인증 헤더 포함)
+    getProductPosition: (productId, companyName) => 
+      httpClient.get(`/unity/product/${productId}/position`, companyName),
     
-    // 스테이션 현재 제품 조회
-    getStationCurrentProduct: (stationCode) =>
-      fetch(`${API_BASE_URL}/unity/station/${stationCode}/current-product`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).then(response => response.json())
+    // 스테이션 현재 제품 조회 (인증 헤더 포함)
+    getStationCurrentProduct: (stationCode, companyName) =>
+      httpClient.get(`/unity/station/${stationCode}/current-product`, companyName),
+    
+    // Unity용 생산 통계 조회
+    getProductionOverviewStatistics: (companyName) =>
+      httpClient.get('/unity/production/overview/statistics', companyName),
+    
+    // Unity용 컨베이어 상태 조회
+    getConveyorStatus: (companyName) =>
+      httpClient.get('/unity/conveyor/status', companyName),
+    
+    // Unity용 생산 자재 정보 조회
+    getProductionMaterials: (companyName) =>
+      httpClient.get('/unity/product/production/materials', companyName),
+    
+    // Unity용 사용자 주문 처리
+    processUserOrder: (orderData, companyName) =>
+      httpClient.post('/unity/production/user/order', orderData, companyName)
   }
 };
 

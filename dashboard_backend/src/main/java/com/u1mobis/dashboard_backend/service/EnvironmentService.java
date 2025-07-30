@@ -89,13 +89,13 @@ public class EnvironmentService {
         }
     }
 
-    // 회사명으로 회사 ID 조회
+    // 회사명으로 회사 ID 조회 (companyName만 사용)
     private Long getCompanyIdByName(String companyName) {
         Optional<Company> company = companyRepository.findByCompanyName(companyName);
         if (company.isPresent()) {
             return company.get().getCompanyId();
         } else {
-            log.warn("회사를 찾을 수 없습니다: {}", companyName);
+            log.warn("등록되지 않은 회사명입니다: {}", companyName);
             throw new RuntimeException("회사를 찾을 수 없습니다: " + companyName);
         }
     }
