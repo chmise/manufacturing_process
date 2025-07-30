@@ -251,8 +251,8 @@ public class ManufacturingSimulatorController {
             Map<String, Object> config = new HashMap<>();
             config.put("companyId", companyId);
             config.put("supportedStations", new String[]{"DoorStation", "WaterLeakTestStation"});
-            config.put("availableColors", new String[]{"Black", "Gray", "Red"}); // Unity 프리팹과 정확히 일치
-            config.put("availableDoorColors", new String[]{"Black", "Gray", "Red"}); // Unity 프리팹과 일치
+            config.put("availableColors", new String[]{"RED", "BLUE", "WHITE", "BLACK", "SILVER"});
+            config.put("availableDoorColors", new String[]{"BLACK", "WHITE", "BROWN", "GRAY"});
             config.put("simulationIntervals", Map.of(
                 "environmentUpdate", "5초",
                 "productMovement", "10초", 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../service/apiService';
-import mqttService from '../../service/mqttService';
 import './SimulatorControl.css';
 
 const SimulatorControl = () => {
@@ -10,8 +9,6 @@ const SimulatorControl = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [mqttConnected, setMqttConnected] = useState(false);
-  const [selectedLineId, setSelectedLineId] = useState(1);
 
   // 시뮬레이터 상태 조회
   const fetchSimulatorStatus = async () => {
@@ -42,90 +39,55 @@ const SimulatorControl = () => {
     }
   };
 
-
-  // Unity 실시간 데이터 조회 (companyName 인자 필수)
-  const fetchUnityData = async (companyName) => {
+  // Unity 실시간 데이터 조회
+  const fetchUnityData = async () => {
     try {
-      const data = await apiService.unity.getRealtimeData(companyName);
+      const data = await apiService.unity.getRealtimeData();
       setUnityData(data);
     } catch (err) {
       console.error('Unity 데이터 조회 실패:', err);
     }
   };
 
-  // MQTT 연결 초기화
-  const initializeMQTT = async () => {
-    try {
-      await mqttService.connect();
-      setMqttConnected(true);
-      console.log('MQTT 서비스 연결 완료');
-    } catch (err) {
-      console.error('MQTT 연결 실패:', err);
-      setMqttConnected(false);
-      setError('MQTT 브로커 연결 실패: ' + err.message);
-    }
-  };
-
-  // 시뮬레이션 시작 (MQTT 직접 전송)
+  // 시뮬레이션 시작
   const handleStartSimulation = async () => {
     setIsLoading(true);
     try {
       setError(null);
-      
-      if (!mqttConnected) {
-        await initializeMQTT();
+      const response = await apiService.simulator.start();
+      if (response.success) {
+        await fetchSimulatorStatus();
+        alert(response.message || '시뮬레이션이 시작되었습니다.');
+      } else {
+        setError(response.message || '시뮬레이션 시작 실패');
       }
-      
-      // MQTT로 시뮬레이션 시작 신호 전송
-      await mqttService.startSimulation(selectedLineId);
-      
-      // 환경 데이터도 함께 전송
-      await mqttService.sendEnvironmentData(selectedLineId);
-      
-      // 컨베이어 시작 신호 전송
-      await mqttService.updateConveyorStatus(selectedLineId, { isRunning: true });
-      
-      alert(`라인 ${selectedLineId} 시뮬레이션이 MQTT로 시작 신호를 전송했습니다.`);
-      
-      // 상태 새로고침
-      await fetchSimulatorStatus();
-      
     } catch (err) {
-      setError('MQTT 시뮬레이션 시작 실패: ' + err.message);
-      console.error('MQTT 시뮬레이션 시작 실패:', err);
+      setError('시뮬레이션 시작 실패: ' + err.message);
+      console.error('시뮬레이션 시작 실패:', err);
     }
     setIsLoading(false);
   };
 
-  // 시뮬레이션 중지 (MQTT 직접 전송)
+  // 시뮬레이션 중지
   const handleStopSimulation = async () => {
     setIsLoading(true);
     try {
       setError(null);
-      
-      if (!mqttConnected) {
-        await initializeMQTT();
+      const response = await apiService.simulator.stop();
+      if (response.success) {
+        await fetchSimulatorStatus();
+        alert(response.message || '시뮬레이션이 중지되었습니다.');
+      } else {
+        setError(response.message || '시뮬레이션 중지 실패');
       }
-      
-      // MQTT로 시뮬레이션 중지 신호 전송
-      await mqttService.stopSimulation(selectedLineId);
-      
-      // 컨베이어 중지 신호 전송
-      await mqttService.updateConveyorStatus(selectedLineId, { isRunning: false });
-      
-      alert(`라인 ${selectedLineId} 시뮬레이션이 MQTT로 중지 신호를 전송했습니다.`);
-      
-      // 상태 새로고침
-      await fetchSimulatorStatus();
-      
     } catch (err) {
-      setError('MQTT 시뮬레이션 중지 실패: ' + err.message);
-      console.error('MQTT 시뮬레이션 중지 실패:', err);
+      setError('시뮬레이션 중지 실패: ' + err.message);
+      console.error('시뮬레이션 중지 실패:', err);
     }
     setIsLoading(false);
   };
 
-  // 시뮬레이션 리셋 (MQTT 직접 전송)
+  // 시뮬레이션 리셋
   const handleResetSimulation = async () => {
     if (!confirm('시뮬레이션을 리셋하시겠습니까? 모든 데이터가 초기화됩니다.')) {
       return;
@@ -134,72 +96,28 @@ const SimulatorControl = () => {
     setIsLoading(true);
     try {
       setError(null);
-      
-      if (!mqttConnected) {
-        await initializeMQTT();
+      const response = await apiService.simulator.reset();
+      if (response.success) {
+        await fetchSimulatorStatus();
+        alert(response.message || '시뮬레이션이 리셋되었습니다.');
+      } else {
+        setError(response.message || '시뮬레이션 리셋 실패');
       }
-      
-      // MQTT로 시뮬레이션 리셋 신호 전송
-      await mqttService.resetSimulation(selectedLineId);
-      
-      alert(`라인 ${selectedLineId} 시뮬레이션이 MQTT로 리셋 신호를 전송했습니다.`);
-      
-      // 상태 새로고침
-      await fetchSimulatorStatus();
-      
     } catch (err) {
-      setError('MQTT 시뮬레이션 리셋 실패: ' + err.message);
-      console.error('MQTT 시뮬레이션 리셋 실패:', err);
+      setError('시뮬레이션 리셋 실패: ' + err.message);
+      console.error('시뮬레이션 리셋 실패:', err);
     }
     setIsLoading(false);
-  };
-
-  // 제품 생성 (MQTT 직접 전송)
-  const handleCreateProduct = async () => {
-    setIsLoading(true);
-    try {
-      setError(null);
-      
-      if (!mqttConnected) {
-        await initializeMQTT();
-      }
-      
-      // MQTT로 제품 생성 신호 전송
-      await mqttService.createProduct(selectedLineId, {
-        productColor: 'BLUE',
-        doorColor: 'WHITE'
-      });
-      
-      alert(`라인 ${selectedLineId}에 새 제품 생성 신호를 MQTT로 전송했습니다.`);
-      
-    } catch (err) {
-      setError('MQTT 제품 생성 실패: ' + err.message);
-      console.error('MQTT 제품 생성 실패:', err);
-    }
-    setIsLoading(false);
-  };
-
-
-  // companyName을 localStorage의 userData에서 가져오는 함수
-  const getCurrentCompanyName = () => {
-    try {
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      return userData.companyName || 'u1mobis'; // 기본값
-    } catch (error) {
-      console.error('사용자 데이터 파싱 오류:', error);
-      return 'u1mobis'; // 기본값
-    }
   };
 
   // 데이터 새로고침
   const refreshAllData = async () => {
     setIsLoading(true);
-    const companyName = getCurrentCompanyName();
     try {
       await Promise.all([
         fetchSimulatorStatus(),
         fetchSimulatorStats(),
-        fetchUnityData(companyName)
+        fetchUnityData()
       ]);
     } catch (err) {
       console.error('데이터 새로고침 실패:', err);
@@ -223,24 +141,9 @@ const SimulatorControl = () => {
     };
   }, [autoRefresh]);
 
-  // 컴포넌트 마운트 시 초기 데이터 로드 및 MQTT 연결
+  // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
-    const initializeComponent = async () => {
-      // MQTT 연결 초기화
-      await initializeMQTT();
-      
-      // 데이터 로드
-      refreshAllData();
-    };
-    
-    initializeComponent();
-    
-    // 컴포넌트 언마운트 시 MQTT 연결 해제
-    return () => {
-      if (mqttService.isConnectedToBroker()) {
-        mqttService.disconnect();
-      }
-    };
+    refreshAllData();
   }, []);
 
   // 실행 중인 라인 개수 계산
@@ -264,29 +167,7 @@ const SimulatorControl = () => {
   return (
     <div className="simulator-control">
       <div className="simulator-header">
-        <h1>🏭 제조 디지털 트윈 시뮬레이터 제어 (MQTT 직접 전송)</h1>
-        
-        {/* MQTT 연결 상태 및 라인 선택 */}
-        <div className="mqtt-status-section">
-          <div className="mqtt-status">
-            <span className={`status-indicator ${mqttConnected ? 'connected' : 'disconnected'}`}>
-              {mqttConnected ? '🟢 MQTT 연결됨' : '🔴 MQTT 연결 안됨'}
-            </span>
-          </div>
-          <div className="line-selector">
-            <label htmlFor="lineSelect">생산 라인: </label>
-            <select 
-              id="lineSelect" 
-              value={selectedLineId} 
-              onChange={(e) => setSelectedLineId(parseInt(e.target.value))}
-              className="form-select"
-            >
-              <option value={1}>라인 1</option>
-              <option value={2}>라인 2</option>
-            </select>
-          </div>
-        </div>
-        
+        <h1>🏭 제조 디지털 트윈 시뮬레이터 제어</h1>
         <div className="control-buttons">
           <button 
             className="btn btn-success" 
@@ -321,13 +202,6 @@ const SimulatorControl = () => {
             onClick={toggleAutoRefresh}
           >
             {autoRefresh ? '⏸️ 자동새로고침 중지' : '▶️ 자동새로고침 시작'}
-          </button>
-          <button 
-            className="btn btn-success" 
-            onClick={handleCreateProduct}
-            disabled={isLoading || !mqttConnected}
-          >
-            🚗 제품 생성 (MQTT)
           </button>
         </div>
       </div>

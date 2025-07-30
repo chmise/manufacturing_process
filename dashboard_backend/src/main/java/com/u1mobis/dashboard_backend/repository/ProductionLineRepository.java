@@ -1,7 +1,6 @@
 package com.u1mobis.dashboard_backend.repository;
 
 import com.u1mobis.dashboard_backend.entity.ProductionLine;
-import com.u1mobis.dashboard_backend.entity.Company;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,10 +33,4 @@ public interface ProductionLineRepository extends JpaRepository<ProductionLine, 
     // 회사의 활성 라인 수 조회
     @Query("SELECT COUNT(pl) FROM ProductionLine pl WHERE pl.company.companyId = :companyId AND pl.isActive = true")
     long countActiveLinesByCompany(@Param("companyId") Long companyId);
-    
-    // Company 객체로 활성 생산라인 조회
-    List<ProductionLine> findByCompanyAndIsActiveTrue(Company company);
-    
-    // Company 객체로 생산라인 조회
-    List<ProductionLine> findByCompany(Company company);
 }
