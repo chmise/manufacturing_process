@@ -51,12 +51,23 @@ public class MQTTSubscriber {
 
             mqttClient.connect(options);
 
-            // 토픽 구독
+            // 기존 토픽 구독
             mqttClient.subscribe("factory/+/environment");
             mqttClient.subscribe("factory/+/+/operations");
+            mqttClient.subscribe("factory/+/+/production/started");
             mqttClient.subscribe("factory/+/+/production/completed");
             mqttClient.subscribe("factory/+/+/conveyor");
             mqttClient.subscribe("factory/+/robot");
+            
+            // 새로운 토픽 구독
+            mqttClient.subscribe("factory/+/+/product/moved");
+            mqttClient.subscribe("factory/+/+/product/arrived/+");
+            mqttClient.subscribe("factory/+/+/+/work/started");
+            mqttClient.subscribe("factory/+/+/+/work/completed");
+            mqttClient.subscribe("factory/+/+/+/status");
+            mqttClient.subscribe("factory/+/+/robots/all/completed");
+            mqttClient.subscribe("factory/+/+/inspection/started");
+            mqttClient.subscribe("factory/+/+/inspection/completed");
 
             log.info("MQTT 구독 완료 - 브로커: tcp://localhost:1883");
 

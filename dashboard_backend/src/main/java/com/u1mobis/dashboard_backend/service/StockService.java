@@ -19,8 +19,8 @@ public class StockService {
     }
 
     // 📈 월별 차트 데이터
-    public List<StockChartDTO> getMonthlyChartData() {
-        List<Stock> stocks = stockRepository.findAll();
+    public List<StockChartDTO> getMonthlyChartData(Long companyId) {
+        List<Stock> stocks = stockRepository.findByCompanyId(companyId);
 
         Map<String, Map<Integer, Integer>> carMonthStockMap = new HashMap<>();
 
@@ -47,8 +47,8 @@ public class StockService {
     }
 
     // 🍩 도넛 차트용 차량별 재고 요약 데이터 (차 이름 기반)
-    public List<StockSummaryDTO> getStockSummary() {
-        List<Stock> stocks = stockRepository.findAll();
+    public List<StockSummaryDTO> getStockSummary(Long companyId) {
+        List<Stock> stocks = stockRepository.findByCompanyId(companyId);
 
         // ✅ 부품명 → 차량명 매핑 테이블
         Map<String, String> partToCarMap = new HashMap<>();
