@@ -52,7 +52,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/dashboard", "/api/production/status", "/api/kpi/realtime").permitAll()
                 .requestMatchers("/api/environment/**", "/api/stock", "/api/stocks/**").permitAll()
                 .requestMatchers("/api/click/**", "/api/iot/**", "/api/conveyor/**").permitAll()
-                .requestMatchers("/api/mqtt/**").permitAll() // MQTT 메시지 발행 허용
                 // 특정 회사 경로 허용 (u1, DEFAULT 등) - 먼저 명시
                 .requestMatchers("/api/u1/**").permitAll()
                 .requestMatchers("/api/DEFAULT/**").permitAll()
@@ -65,11 +64,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/*/stock/**").permitAll()
                 .requestMatchers("/api/*/click/**").permitAll()
                 .requestMatchers("/api/unity/**").permitAll() // Unity 데이터는 공개
-                // Unity Scripts가 직접 호출하는 API들 (인증 없이 허용)
-                .requestMatchers("/api/production/orders/**").permitAll()
-                .requestMatchers("/api/production/door/**").permitAll()
-                .requestMatchers("/api/production/start").permitAll()
-                .requestMatchers("/api/production/counter").permitAll()
                 // 시뮬레이터는 인증 필요 (더 구체적인 경로를 먼저)
                 .requestMatchers("/api/simulator/**").authenticated()
                 .requestMatchers("/api/*/simulator/**").authenticated()

@@ -7,59 +7,14 @@
 }
 
 .simulator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 30px;
   padding: 20px;
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.mqtt-status-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 15px 0;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.mqtt-status .status-indicator {
-  font-weight: bold;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 14px;
-}
-
-.mqtt-status .status-indicator.connected {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.mqtt-status .status-indicator.disconnected {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.line-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.line-selector label {
-  font-weight: 500;
-  color: #495057;
-}
-
-.line-selector .form-select {
-  padding: 5px 10px;
-  border-radius: 5px;
-  border: 1px solid #ced4da;
-  background: white;
 }
 
 .simulator-header h1 {
