@@ -668,25 +668,81 @@ const Factory3DTwin = () => {
     // 3초마다 실시간 데이터 조회 및 Unity 전송
     realtimeIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/unity/realtime-data');
-        if (response.ok) {
-          const data = await response.json();
-          setRealtimeData(data);
-          sendRealtimeDataToUnity(data);
+        // 현재 로그인한 사용자의 회사명 가져오기
+        const userData = localStorage.getItem('userData');
+        let companyName = 'u1mobis'; // 기본값
+        
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            if (user.companyName) {
+              companyName = user.companyName;
+            }
+          } catch (e) {
+            console.warn('사용자 데이터 파싱 실패, 기본 회사명 사용');
+          }
         }
+
+        // API 서비스를 통한 인증된 호출
+        const { apiService } = await import('../../service/apiService');
+        const data = await apiService.unity.getRealtimeData(companyName);
+        
+        setRealtimeData(data);
+        sendRealtimeDataToUnity(data);
       } catch (error) {
         console.error('실시간 데이터 조회 실패:', error);
       }
     }, 3000);
-
   };
 
   // Unity로 실시간 데이터 전송
   const sendRealtimeDataToUnity = (data) => {
     if (!window.unityGlobalState?.instance) {
+      console.warn('⚠️ Unity 인스턴스가 없어서 데이터 전송 불가');
       return;
     }
 
+    console.log('🔄 Unity로 데이터 전송 시도:', data);
+    
+    // 테스트 데이터가 없으면 더미 데이터 생성
+    if (!data || Object.keys(data).length === 0) {
+      console.log('📝 테스트 데이터 생성 중...');
+      data = {
+        products: {
+          'CAR_Line1_001': {
+            position: { x: 10, y: 0, z: 5 },
+            status: 'moving',
+            currentStation: 'DoorStation'
+          },
+          'CAR_Line2_001': {
+            position: { x: -10, y: 0, z: 15 },
+            status: 'processing',
+            currentStation: 'WaterTestStation'
+          }
+        },
+        stations: {
+          'DoorStation_Line1': {
+            status: 'operating',
+            currentProduct: 'CAR_Line1_001',
+            efficiency: 85.5
+          },
+          'WaterLeakTestStation_Line2': {
+            status: 'idle',
+            currentProduct: null,
+            efficiency: 92.0
+          }
+        },
+        robots: {
+          'Robot_FrontRight_Line2': {
+            status: 'active',
+            currentTask: 'working',
+            batteryLevel: 75
+          }
+        }
+      };
+      console.log('🧪 테스트 데이터 생성됨:', data);
+    }
+    
     try {
       const unityInstance = window.unityGlobalState.instance;
 
@@ -701,6 +757,7 @@ const Factory3DTwin = () => {
             currentStation: productData.currentStation
           };
           
+          console.log('📤 차량 데이터 전송:', updateData);
           unityInstance.SendMessage('DigitalTwinManager', 'UpdateProductPosition', JSON.stringify(updateData));
         });
       }
@@ -715,6 +772,7 @@ const Factory3DTwin = () => {
             efficiency: stationData.efficiency
           };
           
+          console.log('📤 스테이션 데이터 전송:', updateData);
           unityInstance.SendMessage('DigitalTwinManager', 'UpdateStationStatus', JSON.stringify(updateData));
         });
       }
@@ -729,13 +787,14 @@ const Factory3DTwin = () => {
             batteryLevel: robotData.batteryLevel
           };
           
+          console.log('📤 로봇 데이터 전송:', updateData);
           unityInstance.SendMessage('DigitalTwinManager', 'UpdateRobotStatus', JSON.stringify(updateData));
         });
       }
 
-
+      console.log('✅ Unity 데이터 전송 완료');
     } catch (error) {
-      console.error('Unity 데이터 전송 실패:', error);
+      console.error('❌ Unity 데이터 전송 실패:', error);
     }
   };
 

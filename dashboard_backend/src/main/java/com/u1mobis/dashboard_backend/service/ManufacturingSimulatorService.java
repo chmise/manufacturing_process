@@ -93,9 +93,9 @@ public class ManufacturingSimulatorService {
         public int productionCount = 0;
         public LocalDateTime startTime;
         public String companyCode;  // MQTT 토픽용 회사 코드
-        public String[] availableColors = {"RED", "BLUE", "WHITE", "BLACK", "SILVER"};
-        public String[] availableDoorColors = {"BLACK", "WHITE", "BROWN", "GRAY"};
-        public String[] doorTypes = {"Front Left Door", "Front Right Door", "Rear Left Door", "Rear Right Door"};
+        public String[] availableColors = {"Black", "Gray", "Red"}; // Unity 프리팹과 정확히 일치
+        public String[] availableDoorColors = {"Black", "Gray", "Red"}; // Unity 프리팹과 일치
+
         public Random random = new Random();
         
         // 제품별 상태 관리
@@ -354,7 +354,7 @@ public class ManufacturingSimulatorService {
     private void createNewProduct(Long companyId, Long lineId, SimulationState state) {
         try {
             state.productionCount++;
-            String productId = "L" + lineId + "_PROD_" + String.format("%03d", state.productionCount);
+            String productId = "CAR_Line" + lineId + "_" + String.format("%03d", state.productionCount); // Unity 패턴과 일치
             
             // 1. 제품 상태 객체 생성
             ProductState productState = new ProductState(productId, lineId);
@@ -391,15 +391,22 @@ public class ManufacturingSimulatorService {
                     .build();
                 currentProductionRepository.save(production);
                 
-                // ProductDetail 생성
+                // 2. ProductDetail 생성 - Unity 좌표계에 맞게 조정
+                double lineOffset = lineId * 20;  // Unity 스케일에 맞게 축소
+                String doorColor = state.availableDoorColors[state.random.nextInt(state.availableDoorColors.length)];
+                int workProgress = 5 + state.random.nextInt(10);  // 5-15% 시작
+                double positionX = -10.0 + state.random.nextDouble() * 20;  // Unity 좌표계
+                double positionY = 0.5;  // 바닥에서 살짝 위
+                double positionZ = lineOffset + state.random.nextDouble() * 10;  // 라인별 Z축 위치
+                
                 ProductDetail detail = ProductDetail.builder()
                     .productId(productId)
-                    .doorColor(productState.doorColor)
-                    .workProgress(0) // 0%에서 시작
-                    .estimatedCompletion(productState.dueDate)
-                    .positionX(productState.positionX)
-                    .positionY(productState.positionY)
-                    .positionZ(0.0)
+                    .doorColor(doorColor)
+                    .workProgress(workProgress)
+                    .estimatedCompletion(LocalDateTime.now().plusHours(6))
+                    .positionX(positionX)
+                    .positionY(positionY)
+                    .positionZ(positionZ)  // Z축 위치 설정
                     .lineId(lineId)
                     .build();
                 productDetailRepository.save(detail);
@@ -408,6 +415,10 @@ public class ManufacturingSimulatorService {
                 if (state.companyCode != null) {
                     mqttPublisher.publishProductionStarted(state.companyCode, lineId, productId, 
                         production.getTargetQuantity(), production.getDueDate().toString());
+                    
+                    mqttPublisher.publishProductDetails(state.companyCode, lineId, productId, 
+                        production.getProductColor(), doorColor, workProgress, positionX, positionZ); // Y를 Z로 변경
+
                 }
                 
                 log.info("새 제품 생성 완료 - 제품 ID: {}, 라인: {}, 색상: {}", 
@@ -472,62 +483,40 @@ public class ManufacturingSimulatorService {
      */
     private void processProductStates(SimulationState state) {
         try {
-            for (ProductState product : state.products.values()) {
-                LocalDateTime now = LocalDateTime.now();
-                long secondsInCurrentState = java.time.Duration.between(product.stateStartTime, now).getSeconds();
-                
-                switch (product.status) {
-                    case PRODUCTION_STARTED:
-                        // 생산 시작 후 즉시 이동 시작
-                        startProductMovement(state, product, "ProductionStart", "RobotWorkArea", 10);
-                        break;
-                        
-                    case MOVING_TO_ROBOT:
-                        // 10초 후 로봇 작업구역 도착
-                        if (secondsInCurrentState >= 10) {
-                            arriveAtRobotArea(state, product);
-                        }
-                        break;
-                        
-                    case ROBOT_WORK_AREA:
-                        // 로봇 작업구역 도착 후 즉시 4대 로봇 작업 시작
-                        startRobotWork(state, product);
-                        break;
-                        
-                    case ROBOT_WORKING:
-                        // 로봇 작업 진행 중 - 개별 로봇 완료 체크는 별도 스케줄러에서 처리
-                        checkRobotWorkCompletion(state, product);
-                        break;
-                        
-                    case ROBOT_COMPLETED:
-                        // 로봇 작업 완료 후 검사구역으로 이동
-                        startProductMovement(state, product, "RobotWorkArea", "InspectionArea", 5);
-                        break;
-                        
-                    case MOVING_TO_INSPECTION:
-                        // 5초 후 검사구역 도착
-                        if (secondsInCurrentState >= 5) {
-                            arriveAtInspectionArea(state, product);
-                        }
-                        break;
-                        
-                    case INSPECTION_AREA:
-                        // 검사구역 도착 후 즉시 수밀검사 시작
-                        startInspection(state, product);
-                        break;
-                        
-                    case INSPECTING:
-                        // 3-5초 후 검사 완료
-                        int inspectionDuration = 3 + state.random.nextInt(3); // 3-5초
-                        if (secondsInCurrentState >= inspectionDuration) {
-                            completeInspection(state, product);
-                        }
-                        break;
-                        
-                    case PRODUCTION_COMPLETED:
-                        // 완료된 제품은 제거
-                        state.products.remove(product.productId);
-                        break;
+            // 현재 DoorStation에 있는 제품들 조회
+            List<CurrentProduction> doorProducts = currentProductionRepository
+                .findByLineIdAndCurrentStation(state.lineId, "DoorStation");
+            
+            // 일부 제품을 WaterLeakTestStation으로 이동
+            for (CurrentProduction product : doorProducts) {
+                if (state.random.nextDouble() < 0.3) {  // 30% 확률로 이동
+                    // CurrentProduction 업데이트
+                    product.setCurrentStation("WaterLeakTestStation");
+                    currentProductionRepository.save(product);
+                    
+                    // ProductDetail 위치 업데이트
+                    Optional<ProductDetail> detailOpt = productDetailRepository.findById(product.getProductId());
+                    if (detailOpt.isPresent()) {
+                        ProductDetail detail = detailOpt.get();
+                        double lineOffset = state.lineId * 20;  // Unity 스케일
+                        // WaterLeakTestStation으로 이동 (Unity 좌표계)
+                        detail.setUnityPosition(20.0 + state.random.nextDouble() * 10, 
+                                              0.5, 
+                                              lineOffset + state.random.nextDouble() * 10);
+                        detail.updateProgress(detail.getWorkProgress() + 20 + state.random.nextInt(30));
+                        productDetailRepository.save(detail);
+                    }
+                    
+                    // 스테이션 상태 업데이트
+                    Optional<StationStatus> stationOpt = stationStatusRepository
+                        .findById("WaterLeakTestStation_L" + state.lineId);
+                    if (stationOpt.isPresent()) {
+                        StationStatus station = stationOpt.get();
+                        station.changeStatus("OPERATING", "CAR_" + product.getProductId().split("_")[2]);
+                        stationStatusRepository.save(station);
+                    }
+                    
+                    log.debug("제품 이동 완료 - 제품: {}, DoorStation → WaterLeakTestStation", product.getProductId());
                 }
             }
             

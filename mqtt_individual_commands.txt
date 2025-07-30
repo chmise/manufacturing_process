@@ -1,0 +1,68 @@
+# MQTT 개별 명령어 모음집
+
+## 📊 KPI 운영데이터 전송
+
+### u1mobis 회사 (우수 등급 - 모든 KPI 95% 이상)
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/1/operations" -m "{\"planned_time\": 480, \"downtime\": 10, \"target_cycle_time\": 30.0, \"good_count\": 450, \"total_count\": 450, \"first_time_pass_count\": 445, \"on_time_delivery_count\": 448}"
+
+### clear 회사 (1개 미달, 2개 보통)
+mosquitto_pub -h localhost -p 1883 -t "factory/fdyeaqhl/1/operations" -m "{\"planned_time\": 480, \"downtime\": 120, \"target_cycle_time\": 35.0, \"good_count\": 290, \"total_count\": 300, \"first_time_pass_count\": 240, \"on_time_delivery_count\": 255}"
+
+## 🌡️ 환경 데이터 전송
+
+### 정상 환경 데이터
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/environment" -m "{\"temperature\": 25.5, \"humidity\": 60.0, \"air_quality\": 95}"
+
+### 이상 환경 데이터 (고온)
+mosquitto_pub -h localhost -p 1883 -t "factory/fdyeaqhl/environment" -m "{\"temperature\": 35.8, \"humidity\": 85.0, \"air_quality\": 70}"
+
+## 🏭 생산 프로세스 데이터
+
+### 생산 시작
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/1/production/started" -m "{\"product_id\": \"PROD_001\", \"target_quantity\": 100, \"due_date\": \"2024-01-15T18:00:00\"}"
+
+### 생산 완료
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/1/production/completed" -m "{\"product_id\": \"PROD_001\", \"cycle_time\": 45.5, \"quality\": \"GOOD\", \"due_date\": \"2024-01-15T18:00:00\"}"
+
+## 🔄 컨베이어 제어
+
+### 컨베이어 시작
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/1/conveyor" -m "{\"command\": \"START\", \"reason\": \"Normal operation\"}"
+
+### 컨베이어 정지
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/1/conveyor" -m "{\"command\": \"STOP\", \"reason\": \"Emergency stop\"}"
+
+### 컨베이어 속도 조정
+mosquitto_pub -h localhost -p 1883 -t "factory/g2qj6jvf/1/conveyor" -m "{\"command\": \"SPEED_CHANGE\", \"reason\": \"Optimize cycle time\", \"speed\": 1.5}"
+
+## 📡 메시지 구독 (수신 확인)
+
+### 모든 KPI 운영데이터 구독
+mosquitto_sub -h localhost -p 1883 -t "factory/+/+/operations"
+
+### 특정 회사 전체 구독
+mosquitto_sub -h localhost -p 1883 -t "factory/g2qj6jvf/+"
+
+### 모든 메시지 구독
+mosquitto_sub -h localhost -p 1883 -t "#"
+
+### 환경 데이터만 구독
+mosquitto_sub -h localhost -p 1883 -t "factory/+/environment"
+
+## 🔧 연결 테스트
+
+### 단순 테스트 메시지
+mosquitto_pub -h localhost -p 1883 -t "test/connection" -m "Hello MQTT"
+
+### 브로커 상태 확인
+mosquitto_pub -h localhost -p 1883 -t "$SYS/broker/version" -m ""
+
+## 📋 회사 코드 매핑
+# fdyeaqhl = clear
+# g2qj6jvf = u1mobis
+# cbdf20dx = ms
+# qbqke0e = 유원대학교
+# kyoehb4c = hi
+# jqjmupjv = Test2
+# l2lqleix = u1
+# znemtjru = zlddjkfdlslf
