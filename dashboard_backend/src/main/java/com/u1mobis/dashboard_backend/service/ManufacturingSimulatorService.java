@@ -93,6 +93,7 @@ public class ManufacturingSimulatorService {
         public int productionCount = 0;
         public LocalDateTime startTime;
         public String companyCode;  // MQTT 토픽용 회사 코드
+
         public String[] availableColors = {"RED", "BLUE", "WHITE", "BLACK", "SILVER"};
         public String[] availableDoorColors = {"BLACK", "WHITE", "BROWN", "GRAY"};
         public String[] doorTypes = {"Front Left Door", "Front Right Door", "Rear Left Door", "Rear Right Door"};
@@ -354,7 +355,7 @@ public class ManufacturingSimulatorService {
     private void createNewProduct(Long companyId, Long lineId, SimulationState state) {
         try {
             state.productionCount++;
-            String productId = "L" + lineId + "_PROD_" + String.format("%03d", state.productionCount);
+            String productId = "CAR_Line" + lineId + "_" + String.format("%03d", state.productionCount); // Unity 패턴과 일치
             
             // 1. 제품 상태 객체 생성
             ProductState productState = new ProductState(productId, lineId);

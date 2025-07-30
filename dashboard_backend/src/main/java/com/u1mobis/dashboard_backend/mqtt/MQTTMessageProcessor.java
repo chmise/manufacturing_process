@@ -235,11 +235,14 @@ public class MQTTMessageProcessor {
             // 실제 구현에서는 CompanyRepository 또는 CompanyService 사용
             // 현재는 간단히 매핑 처리
             Map<String, String> companyMapping = Map.of(
-                "hyundai", "현대자동차",
-                "samsung", "삼성전자", 
-                "lg", "LG전자",
-                "sk", "SK하이닉스",
-                "ms", "현대자동차"  // 기존 호환성 유지
+                "fdyeaqhl", "clear",  // 현재 사용자의 companyCode → companyName 매핑
+                "znemtjru", "zlddjkfdlslf",
+                "qbqke0e", "유원대학교", 
+                "cbdf20dx", "ms",
+                "kyoehb4c", "hi",
+                "jqjmupjv", "Test2",
+                "l2lqleix", "u1",
+                "g2qj6jvf", "u1mobis"
             );
             
             String companyName = companyMapping.get(companyCode.toLowerCase());
