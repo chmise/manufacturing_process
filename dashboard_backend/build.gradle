@@ -48,6 +48,11 @@ dependencies {
 	// InfluxDB Core 3 클라이언트 (REST API 기반)
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
+	
+	// 보안 강화를 위한 추가 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'com.fasterxml.jackson.core:jackson-core'
 	implementation 'com.fasterxml.jackson.core:jackson-annotations'
 	

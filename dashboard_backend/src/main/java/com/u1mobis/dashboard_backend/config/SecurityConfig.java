@@ -1,6 +1,8 @@
 package com.u1mobis.dashboard_backend.config;
 
 import com.u1mobis.dashboard_backend.security.JwtAuthenticationFilter;
+import com.u1mobis.dashboard_backend.security.RateLimitFilter;
+import com.u1mobis.dashboard_backend.security.SecurityHeadersFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +30,8 @@ import java.util.Arrays;
 public class SecurityConfig {
     
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
+    private final SecurityHeadersFilter securityHeadersFilter;
     private final UserDetailsService userDetailsService;
     
     @Bean
@@ -36,6 +40,14 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 추가
             .csrf(csrf -> csrf.disable()) // JWT 사용시 CSRF 비활성화
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 사용 안함
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.deny()) // X-Frame-Options: DENY
+                .contentTypeOptions(contentTypeOptions -> {}) // X-Content-Type-Options: nosniff
+                .httpStrictTransportSecurity(hstsConfig -> hstsConfig
+                    .maxAgeInSeconds(31536000) // 1년
+                    .includeSubDomains(true)
+                )
+            )
             .authorizeHttpRequests(authz -> authz
                 // 인증 없이 접근 가능한 경로들 (정적 경로를 먼저 매칭)
                 .requestMatchers("/api/user/login", "/api/user/register").permitAll()
@@ -83,6 +95,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider()) // 커스텀 인증 프로바이더 설정
+            .addFilterBefore(securityHeadersFilter, UsernamePasswordAuthenticationFilter.class) // 보안 헤더 필터 추가 (최우선)
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class) // Rate Limiting 필터 추가
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // JWT 필터 추가
             
         return http.build();

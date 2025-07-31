@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -54,6 +55,25 @@ public class User {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+    
+    // 패스워드 보안 관련 필드
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+    
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+    
+    @Column(name = "login_attempts", nullable = false, columnDefinition = "integer default 0")
+    private int loginAttempts = 0;
+    
+    @Column(name = "account_locked_until")
+    private LocalDateTime accountLockedUntil;
+    
+    @Column(name = "password_expires_at")
+    private LocalDateTime passwordExpiresAt;
+    
+    @Column(name = "force_password_change", nullable = false, columnDefinition = "boolean default false")
+    private boolean forcePasswordChange = false;
 
     // 편의 메서드: companyId 조회
     public Long getCompanyId() {
