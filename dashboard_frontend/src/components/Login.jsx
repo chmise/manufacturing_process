@@ -194,7 +194,7 @@ const Login = ({ onLogin }) => {
                       회원가입
                     </a>
                   </div>
-                  <div className="text-muted">
+                  <div className="text-muted mb-3">
                     <span>새로운 회사인가요? </span>
                     <a
                       href="#"
@@ -207,6 +207,35 @@ const Login = ({ onLogin }) => {
                     >
                       회사등록
                     </a>
+                  </div>
+                  
+                  {/* 새로운 보안 기능들 */}
+                  <div className="d-flex justify-content-center gap-2 mb-3">
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => navigate("/enterprise-register")}
+                    >
+                      <i className="ti ti-shield-check me-1"></i>
+                      엔터프라이즈 등록
+                    </button>
+                    <button
+                      className="btn btn-outline-success btn-sm"
+                      onClick={() => navigate("/qr-scanner")}
+                    >
+                      <i className="ti ti-qrcode me-1"></i>
+                      QR 스캔
+                    </button>
+                  </div>
+                  
+                  <div className="small text-muted">
+                    <div className="mb-2">
+                      <i className="ti ti-shield-check me-1 text-primary"></i>
+                      <strong>엔터프라이즈 등급:</strong> 고급 보안 기능 포함
+                    </div>
+                    <div>
+                      <i className="ti ti-qrcode me-1 text-success"></i>
+                      <strong>QR 스캔:</strong> 초대 코드로 간편 가입
+                    </div>
                   </div>
                 </div>
 

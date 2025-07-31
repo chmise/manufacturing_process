@@ -270,7 +270,7 @@ const publicAPI = {
     return response.json();
   },
 
-  // 회사 등록 (토큰 없이)
+  // 스마트 회사 등록 (엔터프라이즈 검증 포함)
   companyRegister: async (companyData) => {
     const response = await fetch(`${API_BASE_URL}/company/register`, {
       method: 'POST',
@@ -278,6 +278,21 @@ const publicAPI = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(companyData)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // 초대 링크 검증
+  validateInvitation: async (invitationToken) => {
+    const response = await fetch(`${API_BASE_URL}/invitation/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ invitationToken })
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -460,6 +475,34 @@ export const apiService = {
     // Unity용 사용자 주문 처리
     processUserOrder: (orderData, companyName) =>
       httpClient.post('/unity/production/user/order', orderData, companyName)
+  },
+
+  // 보안 컨텍스트 관리 API
+  security: {
+    // 현재 사용자의 보안 컨텍스트 평가
+    assessContext: (userId, companyId = null) => 
+      httpClient.get(`/security/context/assess?userId=${userId}${companyId ? `&companyId=${companyId}` : ''}`),
+    
+    // 특정 권한에 대한 실시간 위험도 확인
+    checkPermissionRisk: (userId, permissionName) =>
+      httpClient.post('/security/context/check-permission', null, null, 
+        `?userId=${userId}&permissionName=${permissionName}`),
+    
+    // 사용자 권한 레벨 조회
+    getUserRoleLevel: (userId, companyId) =>
+      httpClient.get(`/security/role/level?userId=${userId}&companyId=${companyId}`),
+    
+    // 사용자 권한 변경 (관리자만)
+    changeUserRole: (userId, companyId, newRoleName, changedBy) =>
+      httpClient.post(`/security/role/change?userId=${userId}&companyId=${companyId}&newRoleName=${newRoleName}&changedBy=${changedBy}`),
+    
+    // 회사별 권한 통계 조회
+    getCompanyRoleStatistics: (companyId) =>
+      httpClient.get(`/security/company/${companyId}/role-statistics`),
+    
+    // 디바이스 신뢰성 평가
+    evaluateDeviceTrust: (userId) =>
+      httpClient.get(`/security/device/trust?userId=${userId}`)
   }
 };
 

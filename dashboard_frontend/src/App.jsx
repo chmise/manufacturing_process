@@ -10,6 +10,9 @@ import SimulatorControl from './components/Simulator/SimulatorControl'
 import Login from './components/Login'
 import Register from './components/Register'
 import CompanyRegister from './components/CompanyRegister'
+import EnterpriseCompanyRegister from './components/EnterpriseCompanyRegister'
+import SecurityContextDashboard from './components/SecurityContextDashboard'
+import QRCodeScanner from './components/QRCodeScanner'
 import ProtectedRoute from './components/ProtectedRoute'
 
 
@@ -41,6 +44,8 @@ function App() {
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/company-register" element={<CompanyRegister />} />
+        <Route path="/enterprise-register" element={<EnterpriseCompanyRegister />} />
+        <Route path="/qr-scanner" element={<QRCodeScanner />} />
 
         <Route
           path="/:company/*"
@@ -52,6 +57,7 @@ function App() {
                   <Route path="/factory3d" element={<Factory3D />} />
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/simulator" element={<SimulatorControl />} />
+                  <Route path="/security" element={<SecurityContextDashboard />} />
                   <Route path="/api-test" element={<ApiTest />} />
                 </Routes>
               </Layout>

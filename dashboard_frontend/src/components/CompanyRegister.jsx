@@ -63,14 +63,18 @@ const CompanyRegister = () => {
     }
 
     try {
-      // 회사코드 없이 등록 (서버에서 자동 생성)
+      // 스마트 회사 등록 (엔터프라이즈 검증 포함)
       const response = await apiService.company.register({
         companyName: companyName.trim()
       });
 
       if (response.success) {
-        setSuccess("회사가 성공적으로 등록되었습니다!");
-        setCompanyCode(response.companyCode); // 서버에서 생성된 코드 설정
+        let successMessage = "회사가 성공적으로 등록되었습니다!";
+        if (response.verificationScore) {
+          successMessage += ` (검증점수: ${response.verificationScore.toFixed(1)}%)`;
+        }
+        setSuccess(successMessage);
+        setCompanyCode(response.companyCode); // 서버에서 생성된 스마트 코드
         setIsRegistered(true); // 등록 완료 상태로 변경
       } else {
         setError(response.message || "회사 등록에 실패했습니다.");
@@ -255,7 +259,7 @@ const CompanyRegister = () => {
                   )}
                 </form>
 
-                <div className="text-center">
+                <div className="text-center mb-4">
                   <span className="text-muted">이미 회사가 등록되어 있나요? </span>
                   <button
                     className="btn btn-link text-decoration-none fw-semibold p-0"
@@ -264,6 +268,28 @@ const CompanyRegister = () => {
                   >
                     로그인하기
                   </button>
+                </div>
+
+                <div className="text-center">
+                  <div className="d-flex justify-content-center gap-2 mb-3">
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => navigate("/enterprise-register")}
+                    >
+                      <i className="ti ti-shield-check me-1"></i>
+                      엔터프라이즈 등록
+                    </button>
+                    <button
+                      className="btn btn-outline-success btn-sm"
+                      onClick={() => navigate("/qr-scanner")}
+                    >
+                      <i className="ti ti-qrcode me-1"></i>
+                      QR 스캔
+                    </button>
+                  </div>
+                  <small className="text-muted">
+                    고급 보안 기능을 원하시면 엔터프라이즈 등록을 이용하세요
+                  </small>
                 </div>
 
                 <div className="mt-4">

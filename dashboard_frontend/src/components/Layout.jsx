@@ -144,6 +144,18 @@ const Layout = ({ children }) => {
                   <span className="nav-link-title">시뮬레이터</span>
                 </Link>
               </li>
+              <li className={`nav-item ${isActive('/security')}`}>
+                <Link className="nav-link" to={getCompanyUrl('/security')}>
+                  <span className="nav-link-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-shield-check">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a3 3 0 0 1 1.5 -2.6l6 -3.4a3 3 0 0 1 3 0l6 3.4a3 3 0 0 1 1.5 2.6a12 12 0 0 1 -8.5 15.8" />
+                      <path d="M9 12l2 2l4 -4" />
+                    </svg>
+                  </span>
+                  <span className="nav-link-title">보안</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
