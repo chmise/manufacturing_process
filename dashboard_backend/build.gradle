@@ -58,6 +58,9 @@ dependencies {
 	
 	// javax.annotation for @PostConstruct, @PreDestroy
 	implementation 'jakarta.annotation:jakarta.annotation-api'
+	
+	// Bean Validation
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
 
 tasks.named('test') {

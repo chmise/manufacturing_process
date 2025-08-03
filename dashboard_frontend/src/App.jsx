@@ -13,6 +13,9 @@ import CompanyRegister from './components/CompanyRegister'
 import EnterpriseCompanyRegister from './components/EnterpriseCompanyRegister'
 import SecurityContextDashboard from './components/SecurityContextDashboard'
 import QRCodeScanner from './components/QRCodeScanner'
+import CustomizationWizard from './components/CustomizationWizard'
+import CustomizationWizardNew from './components/CustomizationWizardNew'
+import DashboardNew from './components/DashboardNew'
 import ProtectedRoute from './components/ProtectedRoute'
 
 
@@ -54,10 +57,13 @@ function App() {
               <Layout onLogout={handleLogout}>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard-new" element={<DashboardNew />} />
                   <Route path="/factory3d" element={<Factory3D />} />
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/simulator" element={<SimulatorControl />} />
                   <Route path="/security" element={<SecurityContextDashboard />} />
+                  <Route path="/setup" element={<CustomizationWizard companyId={1} onComplete={() => console.log('Setup completed')} />} />
+                  <Route path="/setup-new" element={<CustomizationWizardNew companyId={1} onComplete={() => window.location.href = '/dashboard-new'} />} />
                   <Route path="/api-test" element={<ApiTest />} />
                 </Routes>
               </Layout>
