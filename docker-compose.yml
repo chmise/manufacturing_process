@@ -1,61 +1,90 @@
-version: '3.8'
+# 전체 스택(PostgreSQL, MQTT 브로커, 백엔드, 프론트엔드)을 한 번에 띄운다.
+#
+#   cp .env.example .env          # 값 채우기 (POSTGRES_PASSWORD, JWT_SECRET 필수)
+#   docker compose up -d --build
+#   → http://localhost
+#
+# EC2 배포(.github/workflows/deploy.yml)도 이 파일을 쓰며, 이때는 Docker Hub에 올린 이미지를 받아서 실행한다.
+# 백엔드(8080), DB(5432), MQTT(1883) 포트는 같은 PC(127.0.0.1)에서만 접속되게 열어둔다.
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-manufacturing_dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?.env에 POSTGRES_PASSWORD를 설정하세요}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    # 개발용 설정: 인증 없이 접속. 외부에 열 때는 사용자/비밀번호를 설정하세요
+    command: mosquitto -c /mosquitto-no-auth.conf
+    ports:
+      - "127.0.0.1:1883:1883"
+    restart: unless-stopped
+
   backend:
+    image: ${DOCKER_HUB_USERNAME:-local}/factory-backend:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: Dockerfile
       target: backend
-    ports:
-      - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=production
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-manufacturing_dashboard}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?.env에 JWT_SECRET을 설정하세요 (32자 이상)}
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+      INFLUXDB_URL: ${INFLUXDB_URL:-http://localhost:8181}
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-}
+      INFLUXDB_DATABASE: ${INFLUXDB_DATABASE:-factory}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     deploy:
       resources:
         limits:
-          memory: 450M      # Spring Boot 메모리 제한
-          cpus: '0.8'       # CPU 제한
-        reservations:
-          memory: 200M
-          cpus: '0.2'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    networks:
-      - factory-network
+          memory: 512M
     restart: unless-stopped
 
   frontend:
+    image: ${DOCKER_HUB_USERNAME:-local}/factory-frontend:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: Dockerfile
       target: frontend
+      args:
+        VITE_OPENWEATHER_API_KEY: ${VITE_OPENWEATHER_API_KEY:-}
     ports:
       - "80:80"
-    deploy:
-      resources:
-        limits:
-          memory: 100M      # nginx 메모리 제한
-          cpus: '0.2'       # CPU 제한
-        reservations:
-          memory: 50M
-          cpus: '0.1'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
     depends_on:
       backend:
         condition: service_healthy
-    networks:
-      - factory-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
 
-networks:
-  factory-network:
-    driver: bridge
+volumes:
+  pgdata:
