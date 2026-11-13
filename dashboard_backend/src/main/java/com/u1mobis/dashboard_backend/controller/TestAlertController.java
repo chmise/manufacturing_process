@@ -6,6 +6,7 @@ import com.u1mobis.dashboard_backend.repository.CompanyRepository;
 import com.u1mobis.dashboard_backend.service.AlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+// 알림 테스트용 API. 개발 환경(SPRING_PROFILES_ACTIVE=dev)에서만 켜진다.
+@Profile("dev")
 @RestController
 @RequestMapping("/api/test")
 @RequiredArgsConstructor

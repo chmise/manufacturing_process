@@ -9,10 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Random;
-import java.util.stream.Collectors;
+import java.security.SecureRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -127,29 +125,11 @@ public class CompanyService {
     }
 
     /**
-     * 모든 회사 목록 조회
-     */
-    @Transactional(readOnly = true)
-    public List<CompanyResponseDTO> getAllCompanies() {
-        List<Company> companies = companyRepository.findAll();
-        
-        return companies.stream()
-                .map(company -> CompanyResponseDTO.builder()
-                        .success(true)
-                        .companyId(company.getCompanyId())
-                        .companyName(company.getCompanyName())
-                        .companyCode(company.getCompanyCode())
-                        .createdAt(company.getCreatedAt())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    /**
      * 유니크한 회사코드 생성
      */
     private String generateUniqueCompanyCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
         String companyCode;
         
         do {
