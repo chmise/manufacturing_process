@@ -1,136 +1,100 @@
 package com.u1mobis.dashboard_backend.service;
 
-import lombok.RequiredArgsConstructor;
+import com.u1mobis.dashboard_backend.mqtt.MqttClientSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ScheduledExecutorService;
+
 /**
- * MQTT 메시지 발행 서비스
+ * MQTT 메시지 발행 서비스 (/api/mqtt/publish에서 사용)
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class MQTTPublishService {
-    
+
+    @Value("${mqtt.enabled:true}")
+    private boolean enabled;
+
     @Value("${mqtt.broker.url:tcp://localhost:1883}")
     private String brokerUrl;
-    
+
     @Value("${mqtt.client.id:dashboard_publisher}")
     private String clientId;
-    
+
     private MqttClient mqttClient;
-    private volatile boolean isConnected = false;
-    
+    private ScheduledExecutorService connector;
+
     @PostConstruct
     public void initialize() {
+        if (!enabled) {
+            log.info("MQTT가 꺼져 있어(mqtt.enabled=false) 발행 서비스를 시작하지 않습니다.");
+            return;
+        }
         try {
-            // 고유한 클라이언트 ID 생성
+            // 고유한 클라이언트 ID 생성. MemoryPersistence로 작업 폴더에 임시 파일을 만들지 않는다
             String uniqueClientId = clientId + "_" + System.currentTimeMillis();
-            mqttClient = new MqttClient(brokerUrl, uniqueClientId);
-            
-            // 연결 옵션 설정
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
-            options.setConnectionTimeout(10);
-            options.setKeepAliveInterval(20);
-            options.setAutomaticReconnect(true);
-            
-            // 콜백 설정
+            mqttClient = new MqttClient(brokerUrl, uniqueClientId, new MemoryPersistence());
+
             mqttClient.setCallback(new MqttCallback() {
                 @Override
                 public void connectionLost(Throwable cause) {
-                    log.warn("MQTT 연결이 끊어졌습니다: {}", cause.getMessage());
-                    isConnected = false;
+                    log.warn("MQTT 연결이 끊어졌습니다 (자동 재연결): {}",
+                            cause != null ? cause.getMessage() : "원인 알 수 없음");
                 }
 
                 @Override
-                public void messageArrived(String topic, MqttMessage message) throws Exception {
+                public void messageArrived(String topic, MqttMessage message) {
                     // Publisher이므로 메시지 수신 처리 안함
                 }
 
                 @Override
                 public void deliveryComplete(IMqttDeliveryToken token) {
-                    log.debug("MQTT 메시지 발행 완료: {}", token.getTopics()[0]);
+                    // 발행 완료 (별도 처리 없음)
                 }
             });
-            
-            // MQTT 브로커에 연결
-            mqttClient.connect(options);
-            isConnected = true;
-            log.info("MQTT 브로커에 연결되었습니다: {}", brokerUrl);
-            
-        } catch (Exception e) {
-            log.error("MQTT 브로커 연결 실패: {}", e.getMessage(), e);
-            isConnected = false;
+
+            connector = MqttClientSupport.connectInBackground(
+                    mqttClient, MqttClientSupport.defaultOptions(), "mqtt-publish-service", () -> { });
+
+        } catch (MqttException e) {
+            log.error("MQTT 발행 클라이언트 생성 실패 - 브로커: {}, 오류: {}", brokerUrl, e.getMessage());
         }
     }
-    
+
     @PreDestroy
     public void cleanup() {
-        try {
-            if (mqttClient != null && mqttClient.isConnected()) {
-                mqttClient.disconnect();
-                mqttClient.close();
-                log.info("MQTT 연결이 해제되었습니다");
-            }
-        } catch (Exception e) {
-            log.error("MQTT 연결 해제 중 오류: {}", e.getMessage(), e);
-        }
+        MqttClientSupport.closeQuietly(mqttClient, connector);
     }
-    
+
     /**
      * MQTT 메시지 발행
      */
     public void publishMessage(String topic, String message, int qos) throws MqttException {
         if (!isConnected()) {
-            // 연결이 끊어진 경우 재연결 시도
-            reconnect();
-        }
-        
-        if (!isConnected()) {
+            // 끊긴 경우 Paho 자동 재연결이 처리하므로 여기서는 실패만 알린다
             throw new MqttException(MqttException.REASON_CODE_CLIENT_NOT_CONNECTED);
         }
-        
-        try {
-            MqttMessage mqttMessage = new MqttMessage(message.getBytes());
-            mqttMessage.setQos(qos);
-            mqttMessage.setRetained(false);
-            
-            mqttClient.publish(topic, mqttMessage);
-            log.info("MQTT 메시지 발행 성공 - Topic: {}, Message: {}", topic, message);
-            
-        } catch (Exception e) {
-            log.error("MQTT 메시지 발행 실패 - Topic: {}, Error: {}", topic, e.getMessage(), e);
-            throw e;
-        }
+
+        MqttMessage mqttMessage = new MqttMessage(message.getBytes(StandardCharsets.UTF_8));
+        mqttMessage.setQos(qos);
+        mqttMessage.setRetained(false);
+
+        mqttClient.publish(topic, mqttMessage);
+        log.info("MQTT 메시지 발행 성공 - Topic: {}", topic);
     }
-    
+
     /**
      * MQTT 브로커 연결 상태 확인
      */
     public boolean isConnected() {
-        return mqttClient != null && mqttClient.isConnected() && isConnected;
-    }
-    
-    /**
-     * MQTT 브로커 재연결
-     */
-    private void reconnect() {
-        try {
-            if (mqttClient != null && !mqttClient.isConnected()) {
-                log.info("MQTT 브로커 재연결 시도...");
-                mqttClient.reconnect();
-                isConnected = true;
-                log.info("MQTT 브로커 재연결 성공");
-            }
-        } catch (Exception e) {
-            log.error("MQTT 브로커 재연결 실패: {}", e.getMessage(), e);
-            isConnected = false;
-        }
+        return mqttClient != null && mqttClient.isConnected();
     }
 }

@@ -3,50 +3,58 @@ package com.u1mobis.dashboard_backend.mqtt;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 시뮬레이터가 만든 공장 데이터를 MQTT로 발행한다. 토픽은 factory/{회사코드}/... 형식.
+ */
 @Component
 @Slf4j
 public class MQTTPublisher {
-    
-    private MqttClient mqttClient;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
+    @Value("${mqtt.enabled:true}")
+    private boolean enabled;
+
+    @Value("${mqtt.broker.url:tcp://localhost:1883}")
+    private String brokerUrl;
+
+    private MqttClient mqttClient;
+    private ScheduledExecutorService connector;
+
     @PostConstruct
     public void initialize() {
+        if (!enabled) {
+            log.info("MQTT가 꺼져 있어(mqtt.enabled=false) 발행 클라이언트를 시작하지 않습니다.");
+            return;
+        }
         try {
-            mqttClient = new MqttClient("tcp://localhost:1883", "dashboard-publisher-" + System.currentTimeMillis());
-            
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
-            options.setKeepAliveInterval(30);
-            
-            mqttClient.connect(options);
-            
-            log.info("MQTT Publisher 초기화 완료 - 브로커: tcp://localhost:1883");
-            
-        } catch (Exception e) {
-            log.error("MQTT Publisher 초기화 실패: {}", e.getMessage());
+            // MemoryPersistence: 작업 폴더에 Paho 임시 파일(.lck)을 만들지 않는다
+            mqttClient = new MqttClient(brokerUrl, "dashboard-publisher-" + System.currentTimeMillis(),
+                    new MemoryPersistence());
+            connector = MqttClientSupport.connectInBackground(
+                    mqttClient, MqttClientSupport.defaultOptions(), "mqtt-publisher", () -> { });
+        } catch (MqttException e) {
+            log.error("MQTT Publisher 생성 실패 - 브로커: {}, 오류: {}", brokerUrl, e.getMessage());
         }
     }
-    
+
     @PreDestroy
     public void cleanup() {
-        try {
-            if (mqttClient != null && mqttClient.isConnected()) {
-                mqttClient.disconnect();
-                mqttClient.close();
-            }
-        } catch (Exception e) {
-            log.error("MQTT Publisher 정리 실패: {}", e.getMessage());
-        }
+        MqttClientSupport.closeQuietly(mqttClient, connector);
     }
     
     /**
@@ -525,7 +533,7 @@ public class MQTTPublisher {
             }
             
             MqttMessage message = new MqttMessage();
-            message.setPayload(payload.getBytes());
+            message.setPayload(payload.getBytes(StandardCharsets.UTF_8));
             message.setQos(1);  // At least once delivery
             message.setRetained(false);
             

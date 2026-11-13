@@ -58,12 +58,24 @@ public class RobotService {
 
     // ===== MQTT 데이터 처리 =====
     
+    /**
+     * MQTT로 받은 로봇 상태 반영. 토픽의 회사(companyId)에 속한 로봇만 갱신한다.
+     */
     @Transactional
-    public void updateRobotFromMqtt(String companyName, MqttRobotDataDto mqttData) {
+    public void updateRobotFromMqtt(Long companyId, MqttRobotDataDto mqttData) {
         String robotId = mqttData.getRobotId();
-        
+        if (robotId == null) {
+            log.warn("robot_id가 없는 로봇 MQTT 메시지를 무시합니다 - 회사 ID: {}", companyId);
+            return;
+        }
+
         Optional<Robot> robotOpt = robotRepository.findById(robotId);
-        
+
+        if (robotOpt.isPresent() && !companyId.equals(robotOpt.get().getCompanyId())) {
+            log.warn("다른 회사 로봇에 대한 MQTT 메시지를 무시합니다 - 토픽 회사 ID: {}, 로봇: {}", companyId, robotId);
+            return;
+        }
+
         if (robotOpt.isPresent()) {
             Robot robot = robotOpt.get();
             
