@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ApexCharts from 'apexcharts';
-import axios from 'axios';
+import { apiService } from '../../service/apiService';
 
 const SummaryCard = () => {
   const chartRef = useRef(null);
@@ -9,10 +9,11 @@ const SummaryCard = () => {
   const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
-    axios.get('http://localhost:8080/api/stocks/summary')
-      .then(response => {
-        if (response.data && Array.isArray(response.data)) {
-          setData(response.data);
+    // 로그인한 회사의 재고 요약 (/api/{회사명}/stocks/summary)
+    apiService.inventory.getStockSummary()
+      .then(summary => {
+        if (Array.isArray(summary)) {
+          setData(summary);
           setHasData(true);
         } else {
           console.warn('백엔드에서 받은 데이터가 비어있거나 형식이 맞지 않습니다.');

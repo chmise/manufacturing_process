@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ApexCharts from 'apexcharts';
-import axios from 'axios';
+import { apiService } from '../../service/apiService';
 
 const ChartInventory = () => {
   const chartRef = useRef(null);
@@ -8,10 +8,11 @@ const ChartInventory = () => {
   const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
-    axios.get('http://localhost:8080/api/stocks/chart')
-      .then(response => {
-        if (response.data && response.data.length > 0) {
-          const chartData = response.data.map(item => ({
+    // 로그인한 회사의 월별 재고 (/api/{회사명}/stocks/chart)
+    apiService.inventory.getStockChart()
+      .then(chart => {
+        if (Array.isArray(chart) && chart.length > 0) {
+          const chartData = chart.map(item => ({
             name: item.carModel,
             data: item.monthlyStock
           }));

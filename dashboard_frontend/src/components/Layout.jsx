@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { apiService } from '../service/apiService'
+import { getCompanyNameFromPath } from '../utils/company'
 import AlertHistory from './Alert/AlertHistory'
 import AlertToast from './Alert/AlertToast'
 import useWebSocket from '../hooks/useWebSocket'
@@ -10,12 +11,8 @@ const Layout = ({ children }) => {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   
-  // URL에서 회사명 추출
-  const getCompanyNameFromUrl = () => {
-    const path = window.location.pathname;
-    const segments = path.split('/').filter(Boolean);
-    return segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'register' ? segments[0] : null;
-  };
+  // URL에서 회사명 추출 (한글 회사명도 원래 이름으로)
+  const getCompanyNameFromUrl = () => getCompanyNameFromPath();
   
   const currentCompany = getCompanyNameFromUrl() || user?.companyName;
   
@@ -44,13 +41,13 @@ const Layout = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
     if (token) {
-      fetchUserInfo(token)
+      fetchUserInfo()
     } else {
       navigate('/login')
     }
   }, [navigate])
 
-  const fetchUserInfo = async (token) => {
+  const fetchUserInfo = async () => {
     try {
       const userData = await apiService.auth.getCurrentUser()
       setUser(userData)

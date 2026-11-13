@@ -9,6 +9,7 @@ import RobotTables from './Robot/RobotTables';
 import InventoryTable from './Inventory/InventoryTable';
 // import AlertToast from './Alert/AlertToast'; // Layout에서 처리
 import apiService from '../service/apiService';
+import { getCompanyNameFromPath } from '../utils/company';
 // import useWebSocket from '../hooks/useWebSocket'; // Layout에서 관리
 
 const Dashboard = () => {
@@ -19,16 +20,11 @@ const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState('connecting');
 
   // 사용자 정보 가져오기 (localStorage에서)
-  const [userInfo, setUserInfo] = useState(null);
+  const [, setUserInfo] = useState(null);
   const [companyInfo, setCompanyInfo] = useState(null);
 
-  // URL에서 회사명 추출 함수
-  const getCompanyNameFromUrl = () => {
-    const path = window.location.pathname;
-    const segments = path.split('/').filter(Boolean);
-    // /{company}/dashboard 형태에서 company 추출
-    return segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'register' ? segments[0] : null;
-  };
+  // URL에서 회사명 추출 함수 (한글 회사명도 원래 이름으로)
+  const getCompanyNameFromUrl = () => getCompanyNameFromPath();
 
   // 현재 로그인된 사용자 정보 로드
   useEffect(() => {
@@ -36,7 +32,6 @@ const Dashboard = () => {
       try {
         // URL에서 회사명 우선 추출
         const urlCompanyName = getCompanyNameFromUrl();
-        console.log('URL에서 추출된 회사명:', urlCompanyName);
         
         if (urlCompanyName) {
           // URL에서 회사명을 찾은 경우
@@ -57,7 +52,6 @@ const Dashboard = () => {
         
         if (isLoggedIn === 'true' && storedUserData) {
           const userData = JSON.parse(storedUserData);
-          console.log('저장된 사용자 데이터:', userData);
           
           setCompanyInfo({
             companyName: userData.companyName,
@@ -92,24 +86,7 @@ const Dashboard = () => {
   // 알림은 Layout에서 중앙집중 관리
   // Dashboard에서는 더 이상 알림 처리 안함
 
-  // 실시간 데이터 처리 (전역 이벤트 사용)
-  useEffect(() => {
-    const handleRealtimeData = (event) => {
-      const data = event.detail;
-      console.log('실시간 데이터 수신:', data);
-      
-      if (data.type === 'environment_update') {
-        console.log('환경 데이터 업데이트:', data.data);
-        setLastUpdated(new Date());
-      } else if (data.type === 'kpi_update') {
-        console.log('KPI 데이터 업데이트:', data.data);
-        setLastUpdated(new Date());
-      }
-    };
-    
-    window.addEventListener('realtimeDataUpdate', handleRealtimeData);
-    return () => window.removeEventListener('realtimeDataUpdate', handleRealtimeData);
-  }, []);
+  // 대시보드 데이터는 아래 폴링(3초)으로 갱신한다. 웹소켓은 알림만 받는다 (Layout에서 처리)
 
   useEffect(() => {
     let mounted = true;

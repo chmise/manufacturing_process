@@ -14,7 +14,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+  // 로그인 여부는 ProtectedRoute가 localStorage로 확인한다. 여기서는 로그인/로그아웃 시 다시 그리기 위한 상태만 둔다
+  const [, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('isLoggedIn') === 'true'
   })
 
@@ -52,7 +53,8 @@ function App() {
                   <Route path="/factory3d" element={<Factory3D />} />
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/simulator" element={<SimulatorControl />} />
-                  <Route path="/api-test" element={<ApiTest />} />
+                  {/* API 테스트 화면은 개발 모드(npm run dev)에서만 연다 */}
+                  {import.meta.env.DEV && <Route path="/api-test" element={<ApiTest />} />}
                 </Routes>
               </Layout>
             </ProtectedRoute>

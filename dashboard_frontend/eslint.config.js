@@ -4,7 +4,8 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist'] },
+  // dist: 빌드 결과물, public/unity3d: Unity가 생성한 WebGL 빌드 파일
+  { ignores: ['dist', 'public/unity3d'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -28,6 +29,13 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+    },
+  },
+  {
+    // 설정 파일은 Node.js에서 실행된다
+    files: ['vite.config.js', 'eslint.config.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ]

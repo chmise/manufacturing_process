@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../service/apiService';
 
-const RobotTable = ({ stationsData = [], lastUpdated }) => {
+const RobotTable = ({ stationsData = [] }) => {
   const [robots, setRobots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
