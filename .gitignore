@@ -8,7 +8,7 @@
 gradle.properties*
 
 # Node.js
-**/node_modules/
+**/node_modules
 *-debug.log*
 *-error.log*
 .pnpm-debug.log*
@@ -20,7 +20,9 @@ __pycache__/
 
 # ==== APPLICATION SPECIFIC ====
 # Spring Boot Backend
-dashboard_backend/src/main/resources/application.properties
+# application.properties는 비밀값 없이 환경변수만 참조하므로 git에 올린다.
+# 개인 설정은 application-local.properties에 두면 올라가지 않는다.
+dashboard_backend/src/main/resources/application-local.properties
 dashboard_backend/out/
 dashboard_backend/bin/
 !**/src/main/**/bin/
@@ -30,6 +32,7 @@ dashboard_backend/bin/
 dashboard_frontend/dist/
 dashboard_frontend/build/
 dashboard_frontend/.env*
+!dashboard_frontend/.env.example
 
 # 전역 패키지 파일 (기존 유지)
 
@@ -81,10 +84,15 @@ Thumbs.db
 .tmp.drivedownload/
 nul
 
-# MQTT 임시 파일
-dashboard_backend/dashboard-backend-*-tcplocalhost*
+# MQTT 임시 파일 (지금은 MemoryPersistence를 써서 생기지 않지만 예전 버전 대비)
+dashboard_backend/*-tcp*/
 
 # ==== SECURITY & SECRETS ====
+# 환경변수 파일 (.env.example만 올린다)
+.env
+**/.env
+.env.*
+!.env.example
 *.key
 *.pem
 *.crt

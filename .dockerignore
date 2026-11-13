@@ -1,0 +1,18 @@
+# 이미지에 들어가면 안 되는 파일 (비밀값, 로컬 빌드 결과물)
+.git
+**/.env
+**/.env.*
+!**/.env.example
+
+**/node_modules
+dashboard_frontend/dist
+
+dashboard_backend/build
+dashboard_backend/.gradle
+dashboard_backend/bin
+dashboard_backend/out
+dashboard_backend/src/main/resources/application-local.properties
+
+**/*.log
+.idea
+.vscode

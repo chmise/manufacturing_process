@@ -11,6 +11,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -21,51 +22,48 @@ import java.io.IOException;
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    
+
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
-    
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                    HttpServletResponse response, 
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        
-        final String requestTokenHeader = request.getHeader("Authorization");
-        
-        String username = null;
-        String jwtToken = null;
-        
-        // JWT Token이 "Bearer " 형식인지 확인
-        if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
-            jwtToken = requestTokenHeader.substring(7);
-            try {
-                username = jwtUtil.getUsernameFromToken(jwtToken);
-            } catch (Exception e) {
-                log.warn("JWT Token에서 사용자명을 가져올 수 없습니다: {}", e.getMessage());
-            }
-        } else {
-            log.debug("JWT Token이 Bearer로 시작하지 않습니다");
+
+        final String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith(BEARER_PREFIX)) {
+            filterChain.doFilter(request, response);
+            return;
         }
-        
+
+        final String jwtToken = header.substring(BEARER_PREFIX.length());
+        String username = null;
+        try {
+            username = jwtUtil.getUsernameFromToken(jwtToken);
+        } catch (Exception e) {
+            log.debug("JWT 토큰을 해석할 수 없습니다: {}", e.getMessage());
+        }
+
         // 토큰을 검증하고 SecurityContext에 인증 정보 설정
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-            
-            // 토큰이 유효한 경우 Spring Security에 인증 설정
-            if (jwtUtil.validateToken(jwtToken, userDetails.getUsername())) {
-                
-                UsernamePasswordAuthenticationToken authToken = 
-                    new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                        
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-                
-                log.debug("사용자 '{}' 인증 완료", username);
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                // 리프레시 토큰으로는 API를 호출할 수 없다
+                if (jwtUtil.validateAccessToken(jwtToken, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (UsernameNotFoundException e) {
+                log.debug("토큰의 사용자를 찾을 수 없습니다: {}", username);
             }
         }
-        
+
         filterChain.doFilter(request, response);
     }
 }
