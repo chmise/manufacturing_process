@@ -20,7 +20,6 @@ const ProductionStatus = ({ oee = 61.2, oeeComponents = null }) => {
 
       // OEE 성과 구간별 색상 적용
       const gradeInfo = getKPIColor(oeeValue, 'oee');
-      console.log('OEE Value:', oeeValue, 'Grade Info:', gradeInfo, 'Original oee:', oee);
 
       const options = {
         chart: {

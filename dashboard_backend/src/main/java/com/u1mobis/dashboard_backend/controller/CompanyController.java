@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/company")
 @RequiredArgsConstructor
@@ -19,15 +17,6 @@ public class CompanyController {
     private final CompanyService companyService;
 
     /**
-     * 테스트용 GET 엔드포인트
-     */
-    @GetMapping("/test")
-    public ResponseEntity<String> testEndpoint() {
-        log.info("=== Company Controller 테스트 엔드포인트 호출 ===");
-        return ResponseEntity.ok("Company Controller가 정상 작동합니다!");
-    }
-
-    /**
      * 회사 등록
      */
     @PostMapping("/register")
@@ -35,7 +24,6 @@ public class CompanyController {
         log.info("=== 회사 등록 요청 수신 ===");
         log.info("회사명: {}", registrationDTO.getCompanyName());
         log.info("회사코드: {}", registrationDTO.getCompanyCode());
-        log.info("요청 전체: {}", registrationDTO);
         
         try {
             CompanyResponseDTO response = companyService.registerCompany(registrationDTO);
@@ -92,16 +80,5 @@ public class CompanyController {
         
         boolean exists = companyService.existsByCompanyCode(companyCode);
         return ResponseEntity.ok(exists);
-    }
-
-    /**
-     * 모든 회사 목록 조회
-     */
-    @GetMapping("/list")
-    public ResponseEntity<List<CompanyResponseDTO>> getAllCompanies() {
-        log.info("모든 회사 목록 조회 요청");
-        
-        List<CompanyResponseDTO> companies = companyService.getAllCompanies();
-        return ResponseEntity.ok(companies);
     }
 }

@@ -20,7 +20,6 @@ const FTYStatus = ({ fty = 95.3, ftyData = null }) => {
 
       // FTY 성과 구간별 색상 적용
       const gradeInfo = getKPIColor(ftyValue, 'fty');
-      console.log('FTY Value:', ftyValue, 'Grade Info:', gradeInfo, 'Original fty:', fty);
 
       const options = {
         chart: {

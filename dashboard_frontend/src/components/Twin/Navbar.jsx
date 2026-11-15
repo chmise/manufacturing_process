@@ -5,7 +5,7 @@ import CycleTime from '../KPI/CycleTime';
 import ExternalEnvironment from '../Environment/ExternalEnvironment';
 import InternalEnvironment from '../Environment/InternalEnvironment';
 
-const Navbar = ({ selectedProduct }) => {  
+const Navbar = () => {  
   return (
     <div className="d-flex flex-column h-100" style={{ gap: '0.8rem' }}>
       <div style={{ height: '215px' }}>

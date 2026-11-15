@@ -133,8 +133,8 @@ public class UserService {
                 return new JwtResponse(false, "사용자를 찾을 수 없습니다.");
             }
             
-            // 리프레시 토큰 유효성 검증
-            if (jwtUtil.validateToken(refreshToken, username)) {
+            // 리프레시 토큰 유효성 검증 (액세스 토큰으로는 갱신할 수 없음)
+            if (jwtUtil.validateRefreshToken(refreshToken, username)) {
                 String newAccessToken = jwtUtil.generateToken(user.getUserName(), user.getUserId(), user.getCompanyId());
                 String newRefreshToken = jwtUtil.generateRefreshToken(user.getUserName());
                 

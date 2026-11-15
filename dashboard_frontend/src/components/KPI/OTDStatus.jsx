@@ -20,7 +20,6 @@ const OTDStatus = ({ otd = 92.5, otdData = null }) => {
 
       // OTD 성과 구간별 색상 적용
       const gradeInfo = getKPIColor(otdValue, 'otd');
-      console.log('OTD Value:', otdValue, 'Grade Info:', gradeInfo, 'Original otd:', otd);
 
       const options = {
         chart: {

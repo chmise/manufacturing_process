@@ -1,35 +1,25 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+import { API_BASE_URL } from '../config';
+import { getCompanyNameFromPath } from '../utils/company';
 
 // 회사별 동적 URL 생성 함수
 const getCompanyApiUrl = (endpoint, companyName = null) => {
   // 로그인/회원가입은 회사별 분리 안함
   if (endpoint.startsWith('/user/login') || endpoint.startsWith('/user/register') || endpoint.startsWith('/user/refresh-token') || endpoint.startsWith('/company/')) {
-    console.log(`제외된 경로: ${endpoint}`);
     return `${API_BASE_URL}${endpoint}`;
   }
   
   // URL에서 회사명 추출 또는 localStorage에서 가져오기
   const company = companyName || getCurrentCompanyFromUrl() || getCurrentCompanyFromStorage();
-  
-  console.log(`API URL 생성 - endpoint: ${endpoint}, company: ${company}`);
-  
+
   if (company) {
-    const finalUrl = `${API_BASE_URL}/${company}${endpoint}`;
-    console.log(`최종 URL: ${finalUrl}`);
-    return finalUrl;
+    return `${API_BASE_URL}/${encodeURIComponent(company)}${endpoint}`;
   }
-  
-  console.log(`회사명 없음 - 기본 URL: ${API_BASE_URL}${endpoint}`);
+
   return `${API_BASE_URL}${endpoint}`;
 };
 
-// URL에서 현재 회사명 추출
-const getCurrentCompanyFromUrl = () => {
-  const path = window.location.pathname;
-  const segments = path.split('/').filter(Boolean);
-  // /{company}/dashboard 형태에서 company 추출
-  return segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'register' && segments[0] !== 'company-register' ? segments[0] : null;
-};
+// URL에서 현재 회사명 추출 (원래 이름으로 되돌린 값. API 주소를 만들 때 다시 인코딩한다)
+const getCurrentCompanyFromUrl = () => getCompanyNameFromPath();
 
 // localStorage에서 회사명 가져오기
 const getCurrentCompanyFromStorage = () => {
@@ -41,8 +31,15 @@ const getCurrentCompanyFromStorage = () => {
   }
 };
 
+// JWT payload 읽기 (base64url → base64로 바꿔서 디코딩)
+const decodeJwtPayload = (token) => {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  return JSON.parse(atob(padded));
+};
+
 // 토큰 관리 유틸리티
-const tokenManager = {
+export const tokenManager = {
   getAccessToken: () => localStorage.getItem('accessToken'),
   getRefreshToken: () => localStorage.getItem('refreshToken'),
   setTokens: (accessToken, refreshToken) => {
@@ -58,7 +55,7 @@ const tokenManager = {
   isTokenExpired: (token) => {
     if (!token) return true;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = decodeJwtPayload(token);
       return payload.exp * 1000 < Date.now();
     } catch {
       return true;
@@ -164,6 +161,24 @@ class AuthenticatedHttpClient {
     if (!response.ok) {
       if (response.status === 401) {
         // 토큰이 여전히 유효하지 않으면 로그아웃
+        tokenManager.clearTokens();
+        window.location.href = '/login';
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  }
+
+  // 회사 경로(/api/{company})를 붙이지 않는 인증 GET 요청
+  async getRaw(path) {
+    const headers = await this.getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
         tokenManager.clearTokens();
         window.location.href = '/login';
       }
@@ -341,7 +356,9 @@ export const apiService = {
   // 재고 관리 API
   inventory: {
     getStock: () => httpClient.get('/stock'),
-    updateStock: (stockData) => httpClient.put('/stock', stockData)
+    updateStock: (stockData) => httpClient.put('/stock', stockData),
+    getStockSummary: () => httpClient.get('/stocks/summary'),
+    getStockChart: () => httpClient.get('/stocks/chart')
   },
 
   // 클릭 이벤트 API
@@ -378,22 +395,7 @@ export const apiService = {
   company: {
     register: publicAPI.companyRegister,
     checkCompanyName: publicAPI.checkCompanyName,
-    getCompanyByCode: (companyCode) => httpClient.get(`/company/code/${companyCode}`),
-    getCompanyInfo: (companyId) => httpClient.get(`/company/${companyId}`),
-    getAllCompanies: () => {
-      // 회사 목록은 공개 API로 처리 (인증 불필요)
-      return fetch(`${API_BASE_URL}/company/list`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      });
-    }
+    getCompanyByCode: (companyCode) => httpClient.get(`/company/code/${companyCode}`)
   },
 
   // 시뮬레이터 관련 API (회사별 경로 사용)
@@ -428,14 +430,9 @@ export const apiService = {
 
   // Unity Twin 관련 API
   unity: {
-    // Unity 실시간 데이터 조회 (인증 없이)
-    getRealtimeData: async (companyName) => {
-      const response = await fetch(`${API_BASE_URL}/unity/realtime-data?companyName=${companyName}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    },
+    // Unity로 넘길 실시간 데이터 조회 (로그인 필요, 자기 회사만)
+    getRealtimeData: (companyName) =>
+      httpClient.getRaw(`/unity/realtime-data?companyName=${encodeURIComponent(companyName)}`),
     
     // 제품 위치 조회 (인증 헤더 포함)
     getProductPosition: (productId, companyName) => 

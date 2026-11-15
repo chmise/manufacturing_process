@@ -7,7 +7,7 @@ const ExternalEnvironment = () => {
     description: '맑음',
     icon: 'sun'
   });
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   const fetchWeatherData = async () => {
     try {
@@ -31,7 +31,6 @@ const ExternalEnvironment = () => {
       }
       
       const data = await response.json();
-      console.log('OpenWeatherMap API 응답:', data);
       
       const newWeatherData = {
         temperature: Math.round(data.main.temp),
@@ -40,7 +39,6 @@ const ExternalEnvironment = () => {
         icon: getWeatherIcon(data.weather[0].main)
       };
       
-      console.log('업데이트될 날씨 데이터:', newWeatherData);
       setWeatherData(newWeatherData);
     } catch (error) {
       console.error('날씨 데이터 로딩 실패:', error);

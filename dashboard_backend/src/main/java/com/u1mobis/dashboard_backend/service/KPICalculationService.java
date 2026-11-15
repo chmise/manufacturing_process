@@ -113,40 +113,16 @@ public class KPICalculationService {
                 companyName, lineId, plannedTime, downtime, targetCycleTime, goodCount, totalCount, firstTimePassCount, onTimeDeliveryCount);
         
         try {
-        
-        // OEE 계산 (표준 공식)
-        // 1. Availability (가용성) = 가동시간 / 계획시간
-        double availability = (plannedTime - downtime) / (double) plannedTime;
-        
-        // 2. Performance (성능률) = 목표사이클타임 / 실제사이클타임
-        // 실제사이클타임 = 가동시간(초) / 생산수량
-        double actualCycleTime = ((plannedTime - downtime) * 60.0) / totalCount;
-        double performance = targetCycleTime / actualCycleTime;
-        performance = Math.min(performance, 1.0); // 100%를 넘지 않도록 제한
-        
-        // 3. Quality (품질률) = 양품수량 / 총생산수량
-        double quality = goodCount / (double) totalCount;
-        
-        // 4. OEE = Availability × Performance × Quality
-        double oee = availability * performance * quality;
-        
-        // 디버깅 로그 추가
-        log.info("=== OEE 계산 디버깅 ===");
-        log.info("입력값 - plannedTime: {}분, downtime: {}분, targetCycleTime: {}초, totalCount: {}개", 
-                plannedTime, downtime, targetCycleTime, totalCount);
-        log.info("Availability: {} ({}%)", availability, availability * 100);
-        log.info("actualCycleTime: {}초", actualCycleTime);
-        log.info("Performance (제한 전): {}", targetCycleTime / actualCycleTime);
-        log.info("Performance (제한 후): {} ({}%)", performance, performance * 100);
-        log.info("Quality: {} ({}%)", quality, quality * 100);
-        log.info("최종 OEE: {} ({}%)", oee, oee * 100);
-        
-        // FTY 계산 (소수점으로 저장)
-        double fty = firstTimePassCount / (double) totalCount;
-        
-        // OTD 계산 (소수점으로 저장)
-        double otd = onTimeDeliveryCount / (double) totalCount;
-        
+
+        KpiResult result = calculate(orZero(plannedTime), orZero(downtime), orZero(targetCycleTime),
+                orZero(goodCount), orZero(totalCount), orZero(firstTimePassCount), orZero(onTimeDeliveryCount));
+        double oee = result.oee();
+        double fty = result.fty();
+        double otd = result.otd();
+
+        log.debug("OEE 계산 - 가용성: {}, 성능: {}, 품질: {}, OEE: {}",
+                result.availability(), result.performance(), result.quality(), oee);
+
         // 회사 정보 조회 (Company 엔티티 필요)
         Company company = getCompanyByName(companyName);
         
@@ -185,6 +161,56 @@ public class KPICalculationService {
         }
     }
     
+    /**
+     * OEE · FTY · OTD 계산 결과 (모두 0~1 사이 비율)
+     */
+    public record KpiResult(double availability, double performance, double quality,
+                            double oee, double fty, double otd) {
+    }
+
+    /**
+     * KPI 계산 (표준 OEE 공식). 계획시간이나 생산수량이 0이어도 NaN/Infinity 없이 0을 돌려준다.
+     *
+     * @param plannedTime       계획 가동시간 (분)
+     * @param downtime          비가동시간 (분)
+     * @param targetCycleTime   목표 사이클타임 (초)
+     */
+    public static KpiResult calculate(int plannedTime, int downtime, double targetCycleTime,
+                                      int goodCount, int totalCount, int firstTimePassCount,
+                                      int onTimeDeliveryCount) {
+        int operatingTime = Math.max(plannedTime - downtime, 0);
+
+        // 1. Availability (가용성) = 가동시간 / 계획시간
+        double availability = ratio(operatingTime, plannedTime);
+
+        // 2. Performance (성능률) = 목표사이클타임 / 실제사이클타임 (100%를 넘지 않도록 제한)
+        //    실제사이클타임 = 가동시간(초) / 생산수량
+        double actualCycleTime = ratio(operatingTime * 60.0, totalCount);
+        double performance = actualCycleTime > 0 ? Math.min(targetCycleTime / actualCycleTime, 1.0) : 0.0;
+
+        // 3. Quality (품질률) = 양품수량 / 총생산수량
+        double quality = ratio(goodCount, totalCount);
+
+        // 4. OEE = Availability × Performance × Quality
+        double oee = availability * performance * quality;
+
+        return new KpiResult(availability, performance, quality, oee,
+                ratio(firstTimePassCount, totalCount),   // FTY
+                ratio(onTimeDeliveryCount, totalCount)); // OTD
+    }
+
+    private static double ratio(double numerator, double denominator) {
+        return denominator > 0 ? numerator / denominator : 0.0;
+    }
+
+    private static int orZero(Integer value) {
+        return value != null ? value : 0;
+    }
+
+    private static double orZero(Double value) {
+        return value != null ? value : 0.0;
+    }
+
     // 회사명으로 Company 엔티티 조회
     private Company getCompanyByName(String companyName) {
         Optional<Company> company = companyRepository.findByCompanyName(companyName);

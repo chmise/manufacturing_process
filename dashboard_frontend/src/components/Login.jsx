@@ -17,11 +17,8 @@ const Login = ({ onLogin }) => {
     try {
       const loginResponse = await apiService.user.login({ username, password });
       
-      console.log('전체 로그인 응답:', loginResponse);
       
       if (loginResponse.success) {
-        console.log('로그인 성공 응답:', loginResponse);
-        console.log('회사명:', loginResponse.companyName);
         
         localStorage.setItem('accessToken', loginResponse.accessToken);
         localStorage.setItem('refreshToken', loginResponse.refreshToken);
@@ -42,12 +39,10 @@ const Login = ({ onLogin }) => {
         }
         
         const redirectUrl = `/${loginResponse.companyName}/dashboard`;
-        console.log('리다이렉트 URL:', redirectUrl);
         
         onLogin(userData);
         navigate(redirectUrl);
       } else {
-        console.log('로그인 실패 응답:', loginResponse);
         setError(loginResponse.message || "잘못된 사용자명 또는 비밀번호입니다.");
       }
     } catch (err) {

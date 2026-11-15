@@ -1,9 +1,13 @@
 package com.u1mobis.dashboard_backend.config;
 
 import com.u1mobis.dashboard_backend.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -15,108 +19,108 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize, @PostAuthorize 사용 가능
 @RequiredArgsConstructor
 public class SecurityConfig {
-    
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
-    
+
+    // 쉼표로 구분한 허용 출처 목록 (CORS_ALLOWED_ORIGINS)
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String[] allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 추가
-            .csrf(csrf -> csrf.disable()) // JWT 사용시 CSRF 비활성화
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 사용 안함
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable()) // JWT(헤더 방식)라 CSRF 토큰 불필요
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // 로그인 안 한 요청은 403이 아니라 401로 응답 (프론트가 재로그인 처리)
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(authz -> authz
-                // 인증 없이 접근 가능한 경로들 (정적 경로를 먼저 매칭)
-                .requestMatchers("/api/user/login", "/api/user/register").permitAll()
-                .requestMatchers("/api/user/refresh-token").permitAll()
-                // 인증이 필요한 정적 경로들
-                .requestMatchers("/api/user/me", "/api/user/logout").authenticated()
-                // 회사별 사용자 정보는 인증 필요 (동적 경로는 나중에)
-                .requestMatchers("/api/user/{companyName}").authenticated()
-                .requestMatchers("/api/company/**").permitAll() // 모든 company 경로 허용
-                // 웹소켓 관련 경로 허용
+                // 에러 응답(/error)은 그대로 내보낸다
+                .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                .requestMatchers("/error").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // 로그인 · 회원가입 · 토큰 갱신
+                .requestMatchers(HttpMethod.POST, "/api/user/login", "/api/user/register", "/api/user/refresh-token").permitAll()
+
+                // 회사 등록 화면에서 로그인 전에 쓰는 API
+                .requestMatchers(HttpMethod.POST, "/api/company/register").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/company/check-name/*").permitAll()
+
+                // 웹소켓 핸드셰이크. 토큰 검사는 STOMP CONNECT 단계에서 한다 (StompAuthChannelInterceptor)
                 .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/api/test/**").permitAll() // 테스트 API 허용
-                // 테스트용 API 엔드포인트 허용
-                .requestMatchers("/api/dashboard", "/api/production/status", "/api/kpi/realtime").permitAll()
-                .requestMatchers("/api/environment/**", "/api/stock", "/api/stocks/**").permitAll()
-                .requestMatchers("/api/click/**", "/api/iot/**", "/api/conveyor/**").permitAll()
-                .requestMatchers("/api/mqtt/**").permitAll() // MQTT 메시지 발행 허용
-                // 특정 회사 경로 허용 (u1, DEFAULT 등) - 먼저 명시
-                .requestMatchers("/api/u1/**").permitAll()
-                .requestMatchers("/api/DEFAULT/**").permitAll()
-                // 회사별 API 경로 허용 (패턴 매칭) - 더 구체적으로
-                .requestMatchers("/api/*/dashboard").permitAll()
-                .requestMatchers("/api/*/kpi/**").permitAll()
-                .requestMatchers("/api/*/environment/**").permitAll()
-                .requestMatchers("/api/*/production/**").permitAll()
-                .requestMatchers("/api/*/conveyor/**").permitAll()
-                .requestMatchers("/api/*/stock/**").permitAll()
-                .requestMatchers("/api/*/click/**").permitAll()
-                .requestMatchers("/api/unity/**").permitAll() // Unity 데이터는 공개
-                // Unity Scripts가 직접 호출하는 API들 (인증 없이 허용)
-                .requestMatchers("/api/production/orders/**").permitAll()
-                .requestMatchers("/api/production/door/**").permitAll()
-                .requestMatchers("/api/production/start").permitAll()
-                .requestMatchers("/api/production/counter").permitAll()
-                // 시뮬레이터는 인증 필요 (더 구체적인 경로를 먼저)
-                .requestMatchers("/api/simulator/**").authenticated()
-                .requestMatchers("/api/*/simulator/**").authenticated()
-                // 기타 회사별 API 경로들 (시뮬레이터 제외)
-                .requestMatchers("/api/*/dashboard/**").permitAll()
-                .requestMatchers("/api/*/user/**").permitAll()
-                .requestMatchers("/api/*/test/**").permitAll()
-                // 정적 리소스 허용 (필요시)
-                .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-                // 그 외 모든 요청은 인증 필요
+
+                // Unity WebGL 빌드가 토큰 없이 직접 부르는 API.
+                // Unity 원본 프로젝트가 저장소에 없어 빌드를 고칠 수 없으므로 읽기 전용 API만 열어둔다.
+                .requestMatchers(HttpMethod.GET,
+                        "/api/production/orders/line/*",
+                        "/api/production/door/signals/line/*",
+                        "/api/conveyor/status",
+                        "/api/unity/health").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/interaction/click").permitAll()
+
+                // 컨테이너 헬스체크
+                .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+
+                // 나머지는 모두 로그인 필요. 회사별 경로(/api/{companyName}/...)는
+                // TenantAccessInterceptor가 소속 회사인지 한 번 더 확인한다.
                 .anyRequest().authenticated()
             )
-            .authenticationProvider(authenticationProvider()) // 커스텀 인증 프로바이더 설정
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // JWT 필터 추가
-            
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
-    
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // 기존의 setAllowedOrigins 대신 setAllowedOriginPatterns 사용
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:*", 
-            "https://localhost:*",
-            "http://127.0.0.1:*"
-        ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns(allowedOrigins));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L); // preflight 캐시 시간
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-    
+
+    static List<String> allowedOriginPatterns(String[] origins) {
+        if (origins == null) {
+            return List.of();
+        }
+        return Arrays.stream(origins)
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-    
+
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();

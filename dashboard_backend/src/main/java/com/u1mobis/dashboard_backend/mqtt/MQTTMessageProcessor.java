@@ -1,56 +1,68 @@
 package com.u1mobis.dashboard_backend.mqtt;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.u1mobis.dashboard_backend.dto.MqttRobotDataDto;
+import com.u1mobis.dashboard_backend.entity.Company;
+import com.u1mobis.dashboard_backend.repository.CompanyRepository;
 import com.u1mobis.dashboard_backend.service.ConveyorService;
 import com.u1mobis.dashboard_backend.service.EnvironmentService;
 import com.u1mobis.dashboard_backend.service.KPICalculationService;
 import com.u1mobis.dashboard_backend.service.ProductionService;
+import com.u1mobis.dashboard_backend.service.RobotService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * MQTT 메시지 처리.
+ *
+ * 토픽 형식: factory/{회사코드}/... (예: factory/AB12CD34/1/operations)
+ * 회사코드는 DB(companies.company_code)에서 찾는다. 등록되지 않은 회사의 메시지는 버린다.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class MQTTMessageProcessor {
-    
+
     private final ProductionService productionService;
     private final KPICalculationService kpiCalculationService;
     private final EnvironmentService environmentService;
     private final ConveyorService conveyorService;
-    
-    // MQTT 메시지 처리 (가상의 메서드 - 실제로는 MQTT 라이브러리 사용)
+    private final RobotService robotService;
+    private final CompanyRepository companyRepository;
+
+    // 장비마다 보내는 필드가 조금씩 달라서, 모르는 필드는 무시한다
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     public void processMQTTMessage(String topic, String payload) {
         try {
-            log.info("=== MQTT 메시지 수신 시작 ===");
-            log.info("토픽: {}", topic);
-            log.info("페이로드: {}", payload);
-            
-            // 토픽에서 회사명 추출: factory/{companyName}/...
-            String companyName = extractCompanyNameFromTopic(topic);
-            if (companyName == null) {
-                log.warn("토픽에서 회사명을 추출할 수 없습니다: {}", topic);
+            log.debug("MQTT 메시지 수신 - 토픽: {}, 페이로드: {}", topic, payload);
+
+            Optional<Company> companyOpt = resolveCompany(topic);
+            if (companyOpt.isEmpty()) {
+                log.warn("등록되지 않은 회사의 MQTT 메시지를 무시합니다: {}", topic);
                 return;
             }
-            log.info("추출된 회사명: {}", companyName);
-            
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode data = mapper.readTree(payload);
-            
-            
-            if (topic.contains("/production/started")) {
-                log.info("생산 시작 처리 시작 - 회사: {}", companyName);
-                
-                // 토픽에서 lineId 추출
+            Company company = companyOpt.get();
+            String companyName = company.getCompanyName();
+
+            JsonNode data = objectMapper.readTree(payload);
+
+            if (isRobotTelemetryTopic(topic)) {
+                // factory/{회사코드}/robot : 로봇 상태 (자기 회사 로봇만 갱신)
+                MqttRobotDataDto robotData = objectMapper.treeToValue(data, MqttRobotDataDto.class);
+                robotService.updateRobotFromMqtt(company.getCompanyId(), robotData);
+            }
+            else if (topic.contains("/production/started")) {
                 Long lineId = extractLineIdFromTopic(topic);
-                
-                // 생산 시작 처리
                 productionService.startProduction(
                     companyName,
                     lineId,
@@ -61,12 +73,7 @@ public class MQTTMessageProcessor {
                 log.info("생산 시작 처리 완료 - 회사: {}, 라인: {}", companyName, lineId);
             }
             else if (topic.contains("/production/completed")) {
-                log.info("생산 완료 처리 시작 - 회사: {}", companyName);
-                
-                // 토픽에서 lineId 추출
                 Long lineId = extractLineIdFromTopic(topic);
-                
-                // 생산 완료 처리
                 productionService.completeProduction(
                     companyName,
                     lineId,
@@ -78,12 +85,7 @@ public class MQTTMessageProcessor {
                 log.info("생산 완료 처리 완료 - 회사: {}, 라인: {}", companyName, lineId);
             }
             else if (topic.contains("/operations")) {
-                log.info("KPI 데이터 처리 시작 - 회사: {}", companyName);
-                
-                // 토픽에서 lineId 추출 (factory/ms/b/operations -> lineId 2L)
                 Long lineId = extractLineIdFromTopic(topic);
-                
-                // KPI 데이터 처리
                 kpiCalculationService.processKPIData(
                     companyName,
                     lineId,
@@ -98,7 +100,6 @@ public class MQTTMessageProcessor {
                 log.info("KPI 데이터 처리 완료 - 회사: {}", companyName);
             }
             else if (topic.contains("/environment")) {
-                // 환경 데이터 처리
                 environmentService.saveEnvironmentData(
                     companyName,
                     data.get("temperature").asDouble(),
@@ -107,226 +108,128 @@ public class MQTTMessageProcessor {
                 );
             }
             else if (topic.contains("/conveyor")) {
-                log.info("컨베이어 데이터 처리 시작 - 회사: {}", companyName);
-                
-                // 토픽에서 lineId 추출
                 Long lineId = extractLineIdFromTopic(topic);
-                
-                // 컨베이어 제어 처리
                 conveyorService.saveConveyorStatus(
                     companyName,
                     lineId,
                     data.get("command").asText(),
                     data.get("reason").asText()
                 );
-                log.info("컨베이어 상태 저장 완료 - 회사: {}, 라인: {}, 명령: {}", companyName, lineId, data.get("command").asText());
+                log.info("컨베이어 상태 저장 완료 - 회사: {}, 라인: {}, 명령: {}",
+                    companyName, lineId, data.get("command").asText());
             }
             else if (topic.contains("/product/moved")) {
-                log.info("제품 이동 처리 시작 - 회사: {}", companyName);
-                
-                // 제품 이동 데이터 처리 - 필요시 데이터베이스 업데이트
-                // 현재는 로깅으로만 처리하고, 향후 Unity 연동 시 활용
-                log.info("제품 이동 완료 - 제품: {}, {}에서 {}로", 
-                    data.get("product_id").asText(), 
-                    data.get("from_station").asText(), 
+                // 현재는 로그로만 남기고, 화면은 DB의 생산 현황을 사용한다
+                log.info("제품 이동 - 회사: {}, 제품: {}, {} → {}",
+                    companyName,
+                    data.get("product_id").asText(),
+                    data.get("from_station").asText(),
                     data.get("to_station").asText());
             }
             else if (topic.contains("/product/arrived/")) {
-                log.info("제품 구역 도착 처리 시작 - 회사: {}", companyName);
-                
-                // 제품 도착 데이터 처리
-                log.info("제품 구역 도착 완료 - 제품: {}, 구역: {}", 
-                    data.get("product_id").asText(), 
+                log.info("제품 구역 도착 - 회사: {}, 제품: {}, 구역: {}",
+                    companyName,
+                    data.get("product_id").asText(),
                     data.get("area_type").asText());
             }
             else if (topic.contains("/work/started")) {
-                log.info("로봇 작업 시작 처리 - 회사: {}", companyName);
-                
-                // 토픽에서 robotId 추출: factory/company/lineId/robotId/work/started
-                String robotId = extractRobotIdFromTopic(topic);
-                
-                log.info("로봇 작업 시작 완료 - 로봇: {}, 제품: {}, 작업: {}", 
-                    robotId, 
-                    data.get("product_id").asText(), 
+                log.info("로봇 작업 시작 - 회사: {}, 로봇: {}, 제품: {}, 작업: {}",
+                    companyName,
+                    extractRobotIdFromTopic(topic, company.getCompanyId()),
+                    data.get("product_id").asText(),
                     data.get("door_type").asText());
             }
             else if (topic.contains("/work/completed")) {
-                log.info("로봇 작업 완료 처리 - 회사: {}", companyName);
-                
-                // 토픽에서 robotId 추출
-                String robotId = extractRobotIdFromTopic(topic);
-                
-                log.info("로봇 작업 완료 - 로봇: {}, 제품: {}, 소요시간: {}초", 
-                    robotId, 
-                    data.get("product_id").asText(), 
+                log.info("로봇 작업 완료 - 회사: {}, 로봇: {}, 제품: {}, 소요시간: {}초",
+                    companyName,
+                    extractRobotIdFromTopic(topic, company.getCompanyId()),
+                    data.get("product_id").asText(),
                     data.get("actual_work_time").asInt());
             }
             else if (topic.contains("/robots/all/completed")) {
-                log.info("전체 로봇 작업 완료 처리 - 회사: {}", companyName);
-                
-                Long lineId = extractLineIdFromTopic(topic);
-                
-                log.info("전체 로봇 작업 완료 - 라인: {}, 제품: {}, 총 소요시간: {}초", 
-                    lineId, 
-                    data.get("product_id").asText(), 
+                log.info("전체 로봇 작업 완료 - 회사: {}, 라인: {}, 제품: {}, 총 소요시간: {}초",
+                    companyName,
+                    extractLineIdFromTopic(topic),
+                    data.get("product_id").asText(),
                     data.get("total_work_time").asInt());
             }
             else if (topic.contains("/inspection/started")) {
-                log.info("수밀검사 시작 처리 - 회사: {}", companyName);
-                
-                Long lineId = extractLineIdFromTopic(topic);
-                
-                log.info("수밀검사 시작 완료 - 라인: {}, 제품: {}, 검사타입: {}", 
-                    lineId, 
-                    data.get("product_id").asText(), 
+                log.info("수밀검사 시작 - 회사: {}, 라인: {}, 제품: {}, 검사타입: {}",
+                    companyName,
+                    extractLineIdFromTopic(topic),
+                    data.get("product_id").asText(),
                     data.get("inspection_type").asText());
             }
             else if (topic.contains("/inspection/completed")) {
-                log.info("수밀검사 완료 처리 - 회사: {}", companyName);
-                
-                Long lineId = extractLineIdFromTopic(topic);
-                
-                log.info("수밀검사 완료 - 라인: {}, 제품: {}, 결과: {}, 누수감지: {}", 
-                    lineId, 
-                    data.get("product_id").asText(), 
+                log.info("수밀검사 완료 - 회사: {}, 라인: {}, 제품: {}, 결과: {}, 누수감지: {}",
+                    companyName,
+                    extractLineIdFromTopic(topic),
+                    data.get("product_id").asText(),
                     data.get("result").asText(),
                     data.get("leak_detected").asBoolean());
             }
             else {
-                log.warn("처리되지 않은 토픽: {}", topic);
+                log.debug("처리하지 않는 토픽: {}", topic);
             }
-            
+
         } catch (Exception e) {
-            log.error("MQTT 메시지 처리 실패 - topic: {}, error: {}", topic, e.getMessage());
-            log.error("에러 스택 트레이스:", e);
+            log.error("MQTT 메시지 처리 실패 - topic: {}, error: {}", topic, e.getMessage(), e);
         }
     }
-    
+
     /**
-     * 토픽에서 회사 코드를 추출합니다.
-     * 토픽 형식: factory/{companyCode}/...
-     * companyCode를 통해 실제 회사명을 조회합니다.
+     * factory/{회사코드}/... 토픽에서 회사를 찾는다.
+     * 회사코드로 먼저 찾고, 없으면 예전 테스트 스크립트 호환을 위해 회사명으로 한 번 더 찾는다.
      */
-    private String extractCompanyNameFromTopic(String topic) {
-        try {
-            String[] parts = topic.split("/");
-            log.info("토픽 파싱 결과: {}", String.join(", ", parts));
-            if (parts.length >= 2 && "factory".equals(parts[0])) {
-                String companyCode = parts[1];  // companyCode 추출
-                log.info("추출된 회사 코드: '{}'", companyCode);
-                
-                // companyCode로 실제 회사명 조회
-                return getCompanyNameByCode(companyCode);
-            }
-            log.warn("토픽 형식이 올바르지 않음: {}", topic);
-            return null;
-        } catch (Exception e) {
-            log.error("토픽 파싱 실패: {}", topic, e);
-            return null;
+    Optional<Company> resolveCompany(String topic) {
+        String[] parts = topic.split("/");
+        if (parts.length < 2 || !"factory".equals(parts[0]) || parts[1].isBlank()) {
+            return Optional.empty();
         }
+        String identifier = parts[1];
+        Optional<Company> byCode = companyRepository.findByCompanyCode(identifier.toUpperCase());
+        if (byCode.isPresent()) {
+            return byCode;
+        }
+        return companyRepository.findByCompanyName(identifier);
     }
-    
+
     /**
-     * 회사 코드로 회사명 조회
+     * 로봇 상태 토픽(factory/{회사코드}/robot)인지 확인
      */
-    private String getCompanyNameByCode(String companyCode) {
-        try {
-            // Company 엔티티에서 companyCode로 조회 후 companyName 반환
-            // 실제 구현에서는 CompanyRepository 또는 CompanyService 사용
-            // 현재는 간단히 매핑 처리
-            Map<String, String> companyMapping = Map.of(
-                "fdyeaqhl", "clear",  // 현재 사용자의 companyCode → companyName 매핑
-                "znemtjru", "zlddjkfdlslf",
-                "qbqke0e", "유원대학교", 
-                "cbdf20dx", "ms",
-                "kyoehb4c", "hi",
-                "jqjmupjv", "Test2",
-                "l2lqleix", "u1",
-                "g2qj6jvf", "u1mobis"
-            );
-            
-            String companyName = companyMapping.get(companyCode.toLowerCase());
-            if (companyName != null) {
-                log.info("회사 코드 '{}' → 회사명 '{}'", companyCode, companyName);
-                return companyName;
-            } else {
-                log.warn("등록되지 않은 회사 코드: {}", companyCode);
-                return companyCode;  // 매핑이 없으면 코드 그대로 사용
-            }
-            
-        } catch (Exception e) {
-            log.error("회사명 조회 실패 - 코드: {}", companyCode, e);
-            return companyCode;
-        }
+    static boolean isRobotTelemetryTopic(String topic) {
+        String[] parts = topic.split("/");
+        return parts.length == 3 && "factory".equals(parts[0]) && "robot".equals(parts[2]);
     }
 
     /**
      * 토픽에서 라인 ID를 추출합니다.
-     * 토픽 형식: factory/{companyName}/{lineId}/operations
-     * lineId는 숫자로 전달 (예: factory/ms/1/operations -> 1L, factory/ms/2/operations -> 2L)
+     * 토픽 형식: factory/{회사코드}/{lineId}/...
      */
     private Long extractLineIdFromTopic(String topic) {
-        try {
-            String[] parts = topic.split("/");
-            if (parts.length >= 3) {
-                String lineIdStr = parts[2]; // 1, 2, 3 등
-                Long lineId = Long.parseLong(lineIdStr);
-                log.info("추출된 라인 ID: {}", lineId);
-                return lineId;
+        String[] parts = topic.split("/");
+        if (parts.length >= 3) {
+            try {
+                return Long.parseLong(parts[2]);
+            } catch (NumberFormatException e) {
+                log.warn("라인 ID가 숫자가 아님, 기본값 1 사용: {}", topic);
+                return 1L;
             }
-            log.warn("라인 ID를 추출할 수 없음, 기본값 1 사용: {}", topic);
-            return 1L; // 기본값
-        } catch (Exception e) {
-            log.error("라인 ID 추출 실패, 기본값 1 사용: {}", topic, e);
-            return 1L; // 기본값
         }
+        log.warn("라인 ID를 추출할 수 없음, 기본값 1 사용: {}", topic);
+        return 1L;
     }
 
     /**
-     * 토픽에서 로봇 ID를 추출합니다.
-     * 토픽 형식: factory/{companyCode}/{lineId}/{robotId}/work/started
-     * robotId는 4번째 부분이지만, 실제 데이터베이스의 robotId는 회사ID가 포함된 형식
-     * 예: factory/hyundai/1/L1_ROBOT_01/work/started -> 1_L1_ROBOT_01 (companyId_robotId)
+     * 토픽에서 로봇 ID를 추출합니다. (로그 표시용)
+     * 토픽 형식: factory/{회사코드}/{lineId}/{robotId}/work/started
+     * DB의 robotId는 회사 ID가 붙은 형식이다. 예: 1_L1_ROBOT_01
      */
-    private String extractRobotIdFromTopic(String topic) {
-        try {
-            String[] parts = topic.split("/");
-            if (parts.length >= 4) {
-                String companyCode = parts[1]; // hyundai, samsung 등
-                String lineId = parts[2]; // 1, 2 등
-                String robotIdFromTopic = parts[3]; // L1_ROBOT_01, L2_ROBOT_02 등
-                
-                // 회사 코드를 회사 ID로 변환 (실제로는 CompanyRepository에서 조회해야 함)
-                Long companyId = getCompanyIdByCode(companyCode);
-                
-                // 데이터베이스 형식의 robotId 생성: {companyId}_{robotId}
-                String fullRobotId = companyId + "_" + robotIdFromTopic;
-                
-                log.info("토픽에서 추출된 로봇 ID: {} -> 데이터베이스 로봇 ID: {}", robotIdFromTopic, fullRobotId);
-                return fullRobotId;
-            }
-            log.warn("로봇 ID를 추출할 수 없음: {}", topic);
-            return "UNKNOWN_ROBOT";
-        } catch (Exception e) {
-            log.error("로봇 ID 추출 실패: {}", topic, e);
-            return "UNKNOWN_ROBOT";
+    private String extractRobotIdFromTopic(String topic, Long companyId) {
+        String[] parts = topic.split("/");
+        if (parts.length >= 4) {
+            return companyId + "_" + parts[3];
         }
+        return "UNKNOWN_ROBOT";
     }
-    
-    /**
-     * 회사 코드로 회사 ID 조회 (간단한 매핑)
-     */
-    private Long getCompanyIdByCode(String companyCode) {
-        // 실제로는 CompanyRepository에서 조회해야 하지만, 현재는 간단히 매핑
-        Map<String, Long> companyIdMapping = Map.of(
-            "hyundai", 1L,
-            "samsung", 2L, 
-            "lg", 3L,
-            "sk", 4L,
-            "ms", 1L  // 기존 호환성 유지
-        );
-        
-        return companyIdMapping.getOrDefault(companyCode.toLowerCase(), 1L);
-    }
-
 }

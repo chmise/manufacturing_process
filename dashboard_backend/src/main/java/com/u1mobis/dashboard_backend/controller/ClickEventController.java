@@ -5,32 +5,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/{companyName}/click")
-@CrossOrigin(originPatterns = {"http://localhost:*", "https://localhost:*"})
 @Slf4j
 public class ClickEventController {
 
     @Autowired
     private ClickEventService clickEventService;
 
-    // CORS preflight 요청 처리
-    @RequestMapping(value = "/object", method = RequestMethod.OPTIONS)
-    public ResponseEntity<?> handleOptions() {
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-                .header("Access-Control-Allow-Headers", "Content-Type")
-                .build();
-    }
+    // CORS preflight(OPTIONS)는 SecurityConfig의 CORS 설정이 처리한다
 
     // Unity에서 클릭 이벤트 처리
     @PostMapping("/object")
-    @CrossOrigin(originPatterns = {"http://localhost:*", "https://localhost:*"}, methods = {RequestMethod.POST, RequestMethod.OPTIONS})
     public ResponseEntity<?> handleObjectClick(@RequestBody Map<String, Object> clickData) {
         try {
             String objectType = (String) clickData.get("objectType");

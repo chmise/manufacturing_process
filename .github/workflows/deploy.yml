@@ -1,60 +1,103 @@
-name: Deploy Node.js MVC App to EC2
+name: Deploy to EC2
 
+# 수동 실행만 한다 (GitHub → Actions → Deploy to EC2 → Run workflow).
+# 예전에는 main에 push할 때마다 자동 배포됐는데, 서버가 없거나 설정이 안 된 상태에서도
+# 배포가 돌아서 수동으로 바꿨다. 자동 배포가 필요하면 push 트리거를 다시 추가하면 된다.
+#
+# 필요한 GitHub Secrets
+#   DOCKER_HUB_USERNAME, DOCKER_HUB_TOKEN : Docker Hub 계정
+#   HOST, USERNAME, KEY, PORT              : EC2 SSH 접속 정보
+#   VITE_OPENWEATHER_API_KEY               : (선택) 날씨 카드용 키
+#
+# EC2에는 Docker와 Docker Compose 플러그인이 설치돼 있어야 하고,
+# ~/factory-app/.env 파일을 미리 만들어 둬야 한다 (.env.example 참고).
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main 
+
+concurrency:
+  group: deploy-ec2
+  cancel-in-progress: false
 
 env:
-  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-  DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
-  
-  APP_DOCKER_IMAGE_NAME: arims0522/factory
-
-  AWS_REGION: ap-northeast-2 
-  EC2_HOST: ${{ secrets.HOST }} 
-  EC2_USERNAME: ${{ secrets.USERNAME }}
-  EC2_KEY: ${{ secrets.KEY }} 
+  BACKEND_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/factory-backend
+  FRONTEND_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/factory-frontend
 
 jobs:
-  build-and-deploy:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    needs: ci
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ env.DOCKER_HUB_USERNAME }}
-        password: ${{ env.DOCKER_HUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./
-        file: ./Dockerfile 
-        push: true
-        tags: ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v1.0.1
-      with:
-        host: ${{ env.EC2_HOST }}
-        username: ${{ env.EC2_USERNAME }}
-        key: ${{ env.EC2_KEY }}
-        port: ${{ secrets.PORT }}
-        script: |
-          set -e
-          echo "--- Pulling Latest App Image ---"
-          docker pull ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
-          echo "--- Stopping and Removing Old App Container ---"
-          docker stop factory || true 
-          docker rm factory || true 
-          echo "--- Running New App Container ---"
-          docker run -d --restart always --name factory -p 80:80 ${{ env.APP_DOCKER_IMAGE_NAME }}:latest
-          
-          echo "--- Cleaning up unused Docker images ---"
-          docker system prune -f
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: frontend
+          push: true
+          build-args: |
+            VITE_OPENWEATHER_API_KEY=${{ secrets.VITE_OPENWEATHER_API_KEY }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          source: docker-compose.yml
+          target: factory-app
+
+      - name: Pull images and restart containers
+        uses: appleboy/ssh-action@v1.0.1
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          envs: DOCKER_HUB_USERNAME,IMAGE_TAG
+          script: |
+            set -e
+            cd ~/factory-app
+            # 비밀값(.env)은 저장소에 없다. 서버에 미리 만들어 둔 파일을 쓴다
+            if [ ! -f .env ]; then
+              echo "~/factory-app/.env 파일이 없습니다. .env.example을 참고해 먼저 만들어 주세요."
+              exit 1
+            fi
+            export DOCKER_HUB_USERNAME IMAGE_TAG
+            docker compose pull backend frontend
+            docker compose up -d --no-build
+            docker image prune -f

@@ -31,7 +31,7 @@ const Factory3DTwin = () => {
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
   // 실시간 데이터 상태
-  const [realtimeData, setRealtimeData] = useState(null);
+  const [, setRealtimeData] = useState(null);
   const realtimeIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -163,7 +163,7 @@ const Factory3DTwin = () => {
                 if (unityInstance && typeof unityInstance.Quit === 'function') {
                   try {
                     unityInstance.Quit();
-                  } catch (e) {
+                  } catch {
                     // Unity 정리 중 오류 무시
                   }
                 }
@@ -443,7 +443,7 @@ const Factory3DTwin = () => {
         } else if (data.type === 'hoverExit') {
           handleUnityHoverExit();
         }
-      } catch (error) {
+      } catch {
         // 호버 데이터 파싱 오류 무시
       }
     };
@@ -522,23 +522,26 @@ const Factory3DTwin = () => {
     const position = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     
     switch (objectType) {
-      case 'robot':
+      case 'robot': {
         // 로봇 클릭 - objectId에서 robotId 추출
         const robotId = extractRobotId(objectId);
         handleDigitalTwinClick('robot', { robotId }, position);
         break;
-        
-      case 'station':
-        // 공정 클릭 - objectId에서 stationCode 추출  
+      }
+
+      case 'station': {
+        // 공정 클릭 - objectId에서 stationCode 추출
         const stationCode = extractStationCode(objectId);
         handleDigitalTwinClick('station', { stationCode }, position);
         break;
-        
-      case 'product':
+      }
+
+      case 'product': {
         // 제품 클릭 - Unity의 CAR_XXX 형태를 데이터베이스 productId로 변환
         const productId = convertCarIdToProductId(objectId);
         handleDigitalTwinClick('product', { productId }, position);
         break;
+      }
         
       default:
         break;
@@ -608,18 +611,21 @@ const Factory3DTwin = () => {
     let hoverData = {};
     
     switch (objectType) {
-      case 'robot':
+      case 'robot': {
         const robotId = extractRobotId(objectId);
         hoverData = { robotId, status: '운영 중' };
         break;
-      case 'station':
+      }
+      case 'station': {
         const stationCode = extractStationCode(objectId);
         hoverData = { stationCode, status: '가동 중' };
         break;
-      case 'product':
+      }
+      case 'product': {
         const productId = convertCarIdToProductId(objectId);
         hoverData = { productId, currentStation: 'A01' };
         break;
+      }
       default:
         hoverData = { objectId, objectType };
     }
@@ -678,7 +684,7 @@ const Factory3DTwin = () => {
             if (user.companyName) {
               companyName = user.companyName;
             }
-          } catch (e) {
+          } catch {
             console.warn('사용자 데이터 파싱 실패, 기본 회사명 사용');
           }
         }
@@ -702,11 +708,9 @@ const Factory3DTwin = () => {
       return;
     }
 
-    console.log('🔄 Unity로 데이터 전송 시도:', data);
     
     // 테스트 데이터가 없으면 더미 데이터 생성
     if (!data || Object.keys(data).length === 0) {
-      console.log('📝 테스트 데이터 생성 중...');
       data = {
         products: {
           'CAR_Line1_001': {
@@ -740,7 +744,6 @@ const Factory3DTwin = () => {
           }
         }
       };
-      console.log('🧪 테스트 데이터 생성됨:', data);
     }
     
     try {
@@ -757,7 +760,6 @@ const Factory3DTwin = () => {
             currentStation: productData.currentStation
           };
           
-          console.log('📤 차량 데이터 전송:', updateData);
           unityInstance.SendMessage('DigitalTwinManager', 'UpdateProductPosition', JSON.stringify(updateData));
         });
       }
@@ -772,7 +774,6 @@ const Factory3DTwin = () => {
             efficiency: stationData.efficiency
           };
           
-          console.log('📤 스테이션 데이터 전송:', updateData);
           unityInstance.SendMessage('DigitalTwinManager', 'UpdateStationStatus', JSON.stringify(updateData));
         });
       }
@@ -787,12 +788,10 @@ const Factory3DTwin = () => {
             batteryLevel: robotData.batteryLevel
           };
           
-          console.log('📤 로봇 데이터 전송:', updateData);
           unityInstance.SendMessage('DigitalTwinManager', 'UpdateRobotStatus', JSON.stringify(updateData));
         });
       }
 
-      console.log('✅ Unity 데이터 전송 완료');
     } catch (error) {
       console.error('❌ Unity 데이터 전송 실패:', error);
     }
@@ -810,7 +809,7 @@ const Factory3DTwin = () => {
         if (typeof window.unityGlobalState.instance.Quit === 'function') {
           window.unityGlobalState.instance.Quit();
         }
-      } catch (e) {
+      } catch {
         // Unity 정리 오류 무시
       }
     }
@@ -838,7 +837,7 @@ const Factory3DTwin = () => {
       scripts.forEach(script => {
         script.parentNode?.removeChild(script);
       });
-    } catch (e) {
+    } catch {
       // 스크립트 제거 오류 무시
     }
     

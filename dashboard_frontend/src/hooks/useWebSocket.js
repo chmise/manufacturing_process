@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { apiService } from '../service/apiService';
+import { apiService, tokenManager } from '../service/apiService';
+import { getWebSocketUrl } from '../config';
 
 // 웹소켓 라이브러리를 동적으로 로드하여 에러 방지
 let SockJS, Stomp;
@@ -21,6 +22,12 @@ const loadWebSocketLibraries = async () => {
   }
 };
 
+/**
+ * 회사별 알림 웹소켓 (STOMP over SockJS)
+ *
+ * 연결할 때 로그인 토큰을 보내고, 자기 회사 알림(/topic/alerts/{회사명})만 구독한다.
+ * 대시보드 숫자는 웹소켓이 아니라 폴링으로 갱신한다.
+ */
 const useWebSocket = (companyName, userId) => {
   const stompClient = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -34,42 +41,46 @@ const useWebSocket = (companyName, userId) => {
       return [];
     }
   });
-  const [realtimeData, setRealtimeData] = useState(null);
 
   useEffect(() => {
-    if (!companyName || !userId) return;
+    if (!companyName || !userId || !tokenManager.getAccessToken()) return;
+
+    let cancelled = false;
 
     const initWebSocket = async () => {
       const libs = await loadWebSocketLibraries();
-      if (!libs) {
-        console.error('웹소켓 라이브러리 로드 실패');
+      if (!libs || cancelled) {
+        if (!libs) console.error('웹소켓 라이브러리 로드 실패');
         return;
       }
 
       try {
-        // WebSocket 연결 설정
-        stompClient.current = new libs.Stomp();
-        stompClient.current.webSocketFactory = () => {
-          return new libs.SockJS(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/ws`);
+        const client = new libs.Stomp();
+        stompClient.current = client;
+        client.webSocketFactory = () => new libs.SockJS(getWebSocketUrl());
+
+        // 연결(재연결 포함) 직전마다 최신 토큰을 헤더에 넣는다
+        client.beforeConnect = () => {
+          client.connectHeaders = {
+            Authorization: `Bearer ${tokenManager.getAccessToken()}`
+          };
         };
 
         // 연결 콜백 설정
-        stompClient.current.onConnect = (frame) => {
-          console.log('WebSocket 연결됨:', frame);
+        client.onConnect = () => {
           setIsConnected(true);
 
           // 회사별 알림 구독
           const alertTopic = `/topic/alerts/${companyName}`;
-          stompClient.current.subscribe(alertTopic, (message) => {
+          client.subscribe(alertTopic, (message) => {
             const alert = JSON.parse(message.body);
-            console.log('새 알림 수신:', alert);
-            
+
             const alertWithId = {
               ...alert,
               id: Date.now() + Math.random(),
               timestamp: new Date(alert.timestamp)
             };
-            
+
             setAlerts(prevAlerts => [
               alertWithId,
               ...prevAlerts.slice(0, 4) // 최대 5개만 유지
@@ -86,57 +97,38 @@ const useWebSocket = (companyName, userId) => {
               }
               return newHistory;
             });
-            
+
             // 전역 알림 이벤트 발생 (Dashboard에서 사용)
-            window.dispatchEvent(new CustomEvent('globalAlert', { 
-              detail: alertWithId 
+            window.dispatchEvent(new CustomEvent('globalAlert', {
+              detail: alertWithId
             }));
 
             // 5초 후 알림 자동 제거
             setTimeout(() => {
-              setAlerts(prevAlerts => 
+              setAlerts(prevAlerts =>
                 prevAlerts.filter(a => a.id !== alertWithId.id)
               );
             }, 5000);
           });
-
-          // 회사별 실시간 데이터 구독
-          const dataTopic = `/topic/data/${companyName}`;
-          stompClient.current.subscribe(dataTopic, (message) => {
-            const data = JSON.parse(message.body);
-            console.log('실시간 데이터 수신:', data);
-            
-            setRealtimeData(data);
-            
-            // 부모 컴포넌트에 데이터 전달을 위한 커스텀 이벤트 발생
-            window.dispatchEvent(new CustomEvent('realtimeDataUpdate', { 
-              detail: data 
-            }));
-          });
-
-          // 구독 메시지 전송
-          stompClient.current.publish({
-            destination: '/app/subscribe',
-            body: JSON.stringify({
-              companyName: companyName,
-              userId: userId
-            })
-          });
         };
 
         // 에러 콜백 설정
-        stompClient.current.onStompError = (frame) => {
-          console.error('STOMP 에러:', frame);
+        client.onStompError = (frame) => {
+          console.error('STOMP 에러:', frame.headers?.message || frame);
           setIsConnected(false);
         };
 
-        stompClient.current.onWebSocketError = (error) => {
+        client.onWebSocketError = (error) => {
           console.error('WebSocket 연결 실패:', error);
           setIsConnected(false);
         };
 
+        client.onWebSocketClose = () => {
+          setIsConnected(false);
+        };
+
         // 연결 시작
-        stompClient.current.activate();
+        client.activate();
       } catch (error) {
         console.error('웹소켓 초기화 오류:', error);
         setIsConnected(false);
@@ -147,8 +139,10 @@ const useWebSocket = (companyName, userId) => {
 
     // 정리 함수
     return () => {
+      cancelled = true;
       if (stompClient.current) {
         stompClient.current.deactivate();
+        stompClient.current = null;
         setIsConnected(false);
       }
     };
@@ -162,49 +156,33 @@ const useWebSocket = (companyName, userId) => {
     try {
       // 백엔드에서 모든 알림 삭제
       await apiService.alerts.deleteAllAlerts(companyName);
-      
-      // 로컬 상태 및 localStorage 삭제
-      setAlertHistory([]);
-      localStorage.removeItem(`alertHistory_${companyName}`);
-      
-      console.log('모든 알림이 성공적으로 삭제되었습니다.');
     } catch (error) {
       console.error('전체 알림 삭제 실패:', error);
-      // 백엔드 삭제 실패 시에도 로컬은 삭제
-      setAlertHistory([]);
-      localStorage.removeItem(`alertHistory_${companyName}`);
     }
+    // 백엔드 삭제가 실패해도 화면과 localStorage는 비운다
+    setAlertHistory([]);
+    localStorage.removeItem(`alertHistory_${companyName}`);
   };
 
   const removeIndividualAlert = async (alertId) => {
     try {
       // 백엔드에서 개별 알림 삭제
       await apiService.alerts.deleteAlert(alertId, companyName);
-      
-      // 로컬 상태에서 삭제
-      setAlertHistory(prevHistory => 
-        prevHistory.filter(alert => (alert.id || alert.alertId) !== alertId)
-      );
-      
-      // localStorage 업데이트
-      const updatedHistory = alertHistory.filter(alert => (alert.id || alert.alertId) !== alertId);
-      localStorage.setItem(`alertHistory_${companyName}`, JSON.stringify(updatedHistory));
-      
-      console.log('개별 알림이 성공적으로 삭제되었습니다:', alertId);
     } catch (error) {
       console.error('개별 알림 삭제 실패:', error);
-      // 백엔드 삭제 실패 시에도 로컬은 삭제 (UX 향상)
-      setAlertHistory(prevHistory => 
-        prevHistory.filter(alert => (alert.id || alert.alertId) !== alertId)
-      );
     }
+    // 백엔드 삭제가 실패해도 화면에서는 지운다 (UX)
+    setAlertHistory(prevHistory => {
+      const updatedHistory = prevHistory.filter(alert => (alert.id || alert.alertId) !== alertId);
+      localStorage.setItem(`alertHistory_${companyName}`, JSON.stringify(updatedHistory));
+      return updatedHistory;
+    });
   };
 
   return {
     isConnected,
     alerts,
     alertHistory,
-    realtimeData,
     removeAlert,
     clearAlertHistory,
     removeIndividualAlert

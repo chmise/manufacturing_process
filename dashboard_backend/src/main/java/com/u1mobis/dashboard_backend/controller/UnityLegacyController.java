@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 @RequiredArgsConstructor
 @Slf4j
 public class UnityLegacyController {
@@ -114,31 +112,12 @@ public class UnityLegacyController {
     }
     
     /**
-     * Unity WebGL에서 호출하는 일반적인 생산 현황
-     */
-    @GetMapping("/production/status")
-    public ResponseEntity<Map<String, Object>> getProductionStatus() {
-        try {
-            log.info("Unity Legacy API 호출 - 생산 현황");
-            
-            Map<String, Object> productionStatus = productionService.getCurrentProductionStatus();
-            return ResponseEntity.ok(productionStatus);
-            
-        } catch (Exception e) {
-            log.error("Unity 생산 현황 조회 실패: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                "status", "error", 
-                "message", "생산 현황 조회 실패"
-            ));
-        }
-    }
-    
-    /**
-     * Unity WebGL에서 호출하는 실시간 데이터 (Legacy) - 인증 없음
+     * 화면(React)이 Unity로 넘길 실시간 데이터를 가져올 때 쓰는 API (로그인 필요)
+     * companyName은 로그인한 사용자의 회사와 같아야 한다 (TenantAccessInterceptor가 확인)
      */
     @GetMapping("/unity/realtime-data")
     public ResponseEntity<Map<String, Object>> getRealtimeData(
-            @RequestParam(value = "companyName", defaultValue = "u1mobis") String companyName) {
+            @RequestParam("companyName") String companyName) {
         try {
             log.info("Unity Legacy API 호출 - 실시간 데이터, 회사: {}", companyName);
             
@@ -207,27 +186,13 @@ public class UnityLegacyController {
             }
             
             // 스테이션 데이터 (기본 데이터)
+            // Map.of()는 null 값을 넣으면 NullPointerException이 나서 항상 빈 데이터가 반환됐다 → null을 허용하는 맵 사용
             Map<String, Object> stations = new HashMap<>();
-            stations.put("DoorStation_Line1", Map.of(
-                "status", "operating",
-                "currentProduct", products.isEmpty() ? null : products.keySet().iterator().next(),
-                "efficiency", 85.5
-            ));
-            stations.put("DoorStation_Line2", Map.of(
-                "status", "idle", 
-                "currentProduct", null,
-                "efficiency", 92.0
-            ));
-            stations.put("WaterLeakTestStation_Line1", Map.of(
-                "status", "idle",
-                "currentProduct", null,
-                "efficiency", 90.0
-            ));
-            stations.put("WaterLeakTestStation_Line2", Map.of(
-                "status", "operating",
-                "currentProduct", null,
-                "efficiency", 88.5
-            ));
+            stations.put("DoorStation_Line1", stationData("operating",
+                products.isEmpty() ? null : products.keySet().iterator().next(), 85.5));
+            stations.put("DoorStation_Line2", stationData("idle", null, 92.0));
+            stations.put("WaterLeakTestStation_Line1", stationData("idle", null, 90.0));
+            stations.put("WaterLeakTestStation_Line2", stationData("operating", null, 88.5));
             
             // 로봇 데이터 (기본 데이터)
             Map<String, Object> robots = new HashMap<>();
@@ -282,6 +247,14 @@ public class UnityLegacyController {
         }
     }
     
+    private static Map<String, Object> stationData(String status, Object currentProduct, double efficiency) {
+        Map<String, Object> station = new HashMap<>();
+        station.put("status", status);
+        station.put("currentProduct", currentProduct);
+        station.put("efficiency", efficiency);
+        return station;
+    }
+
     /**
      * Unity WebGL에서 호출하는 클릭 상호작용 기록 (Legacy) - 인증 없음
      */
