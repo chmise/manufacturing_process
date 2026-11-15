@@ -71,12 +71,12 @@ public class DataInitializer {
     }
 
     private Company ensureCompanyExists() {
-        return companyRepository.findById(1L)
+        // ID는 DB가 만든다. ID(1)를 직접 지정하면 빈 DB에서 merge가 실패해 서버가 시작되지 않는다
+        return companyRepository.findByCompanyCode("DEFAULT")
                 .orElseGet(() -> {
                     log.info("기본 회사 데이터 생성");
                     return companyRepository.save(
                             Company.builder()
-                                    .companyId(1L)
                                     .companyName("Default Company")
                                     .companyCode("DEFAULT")
                                     .createdAt(LocalDateTime.now())
